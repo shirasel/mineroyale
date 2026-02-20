@@ -1,0 +1,34 @@
+countdown-seconds: 30
+game-duration-seconds: 1800
+
+teleportRange: 500000
+teleport-center-x: 0
+teleport-center-z: 0
+teleport-radius: 1000
+
+deathInventoryUpdateDelayTicks: 20
+
+world-border:
+  center:
+    x: 0
+    z: 0
+
+  damage-per-second: 1.0
+  warning-distance: 5
+  warning-time: 10
+
+  phases:
+    1:
+      start-size: 500
+      end-size: 300
+      duration: 300
+
+    2:
+      start-size: 300
+      end-size: 150
+      duration: 300
+
+    3:
+      start-size: 150
+      end-size: 50
+      duration: 300
