@@ -3,10 +3,14 @@ package me.shirasemaru.mineroyale12111.game
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
+import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
-import java.util.UUID
+import java.util.*
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class GameManager(
     val plugin: JavaPlugin,
@@ -33,6 +37,8 @@ class GameManager(
 
         playerManager.registerAllOnline()
 
+        teleportPlayersRandomly() // 追加
+
         borderManager.initialize()
 
         val phases = configManager.loadBorderPhases()
@@ -40,7 +46,6 @@ class GameManager(
         remainingGameSeconds = configManager.gameDurationSeconds.toInt()
 
         startGameTimer()
-
         startPhaseTracking(phases)
 
         borderManager.runPhases(phases) {
@@ -48,6 +53,36 @@ class GameManager(
         }
 
         Bukkit.broadcastMessage("§aゲーム開始！")
+    }
+
+    /*
+     * =========================
+     * ランダムテレポート
+     * =========================
+     */
+    private fun teleportPlayersRandomly() {
+
+        val world = configManager.gameWorld
+        val centerX = configManager.teleportCenterX
+        val centerZ = configManager.teleportCenterZ
+        val radius = configManager.teleportRadius
+
+        playerManager.getAlivePlayers().forEach { gamePlayer ->
+
+            val player: Player = gamePlayer.player ?: return@forEach
+
+            val angle = Random().nextDouble() * 2 * Math.PI
+            val distance = sqrt(Random().nextDouble()) * radius
+
+            val x = centerX + cos(angle) * distance
+            val z = centerZ + sin(angle) * distance
+
+            val y = world.getHighestBlockYAt(x.toInt(), z.toInt()) + 1
+
+            val location = Location(world, x, y.toDouble(), z)
+
+            player.teleport(location)
+        }
     }
 
     private fun startGameTimer() {
@@ -96,12 +131,11 @@ class GameManager(
 
         if (state != GameState.RUNNING) return
 
-        val uuid: UUID = player.uniqueId
+        val uuid = player.uniqueId
 
         if (!playerManager.isAlive(uuid)) return
 
         playerManager.markDead(uuid)
-
         player.sendMessage("§cあなたは脱落しました。")
 
         checkWinCondition()

@@ -1,6 +1,8 @@
 package me.shirasemaru.mineroyale12111.config
 
 import me.shirasemaru.mineroyale12111.game.BorderPhase
+import org.bukkit.Bukkit
+import org.bukkit.World
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -15,9 +17,6 @@ class ConfigManager(private val plugin: JavaPlugin) {
     val gameDurationSeconds: Long
         get() = config.getLong("game-duration-seconds", 1800L)
 
-    val teleportRange: Int
-        get() = config.getInt("teleportRange", 500000)
-
     val teleportCenterX: Double
         get() = config.getDouble("teleport-center-x", 0.0)
 
@@ -27,8 +26,8 @@ class ConfigManager(private val plugin: JavaPlugin) {
     val teleportRadius: Int
         get() = config.getInt("teleport-radius", 1000)
 
-    val deathInventoryUpdateDelayTicks: Long
-        get() = config.getLong("deathInventoryUpdateDelayTicks", 20L)
+    val gameWorld: World
+        get() = Bukkit.getWorlds()[0]
 
     val borderCenterX: Double
         get() = config.getDouble("world-border.center.x", 0.0)
@@ -50,7 +49,6 @@ class ConfigManager(private val plugin: JavaPlugin) {
                 val endSize = phaseSection.getDouble("end-size")
                 val duration = phaseSection.getLong("duration")
 
-                // バリデーション
                 if (startSize <= 0 || endSize <= 0 || duration <= 0) {
                     plugin.logger.warning("BorderPhase $phaseNumber に無効な値があります。スキップします。")
                     return@mapNotNull null
