@@ -195,7 +195,7 @@ class GameManager(
 
         playerManager.markDead(player.uniqueId)
 
-        // 🔥 Spectator化
+        // Spectator化
         makeSpectator(player)
 
         Bukkit.broadcastMessage("§c${player.name} はゲームから脱落しました")
