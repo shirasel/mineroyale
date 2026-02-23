@@ -46,7 +46,7 @@ class GameManager(
         startGameTimer()
 
         borderManager.runPhases {
-            endGame(null)
+            handleFinalPhaseFinished()
         }
 
         Bukkit.broadcastMessage("§aゲーム開始！")
@@ -165,11 +165,7 @@ class GameManager(
      * =========================
      */
     fun handleDeath(player: Player) {
-
-        if (state != GameState.RUNNING) return
-
-        playerManager.markDead(player.uniqueId)
-        checkWinCondition()
+        forceEliminate(player)
     }
 
     private fun checkWinCondition() {
@@ -179,6 +175,47 @@ class GameManager(
         when (alive.size) {
             1 -> endGame(alive.first())
             0 -> endGame(null)
+        }
+    }
+
+    private fun handleFinalPhaseFinished() {
+
+        Bukkit.broadcastMessage("§c最終フェーズ突入！最後の1人になるまで戦え！")
+    }
+
+    /*
+     * =========================
+     * 勝敗判定制御
+     * =========================
+     */
+    fun forceEliminate(player: Player) {
+
+        if (state != GameState.RUNNING) return
+        if (!playerManager.isAlive(player.uniqueId)) return
+
+        playerManager.markDead(player.uniqueId)
+
+        // 🔥 Spectator化
+        makeSpectator(player)
+
+        Bukkit.broadcastMessage("§c${player.name} はゲームから脱落しました")
+
+        checkWinCondition()
+    }
+
+    private fun makeSpectator(player: Player) {
+
+        player.gameMode = GameMode.SPECTATOR
+        player.isFlying = true
+        player.allowFlight = true
+
+        // 体力全回復（念のため）
+        player.health = player.maxHealth
+
+        // 火やエフェクト消去
+        player.fireTicks = 0
+        player.activePotionEffects.forEach {
+            player.removePotionEffect(it.type)
         }
     }
 
@@ -209,8 +246,16 @@ class GameManager(
     }
 
     private fun resetGame() {
+
         borderManager.reset()
         playerManager.clear()
+
+        Bukkit.getOnlinePlayers().forEach { player ->
+            player.gameMode = GameMode.SURVIVAL
+            player.allowFlight = false
+            player.isFlying = false
+        }
+
         state = GameState.WAITING
     }
 }

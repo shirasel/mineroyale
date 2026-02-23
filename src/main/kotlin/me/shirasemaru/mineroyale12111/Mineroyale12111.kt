@@ -3,6 +3,7 @@ package me.shirasemaru.mineroyale12111
 import me.shirasemaru.mineroyale12111.command.MrCommand
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameManager
+import me.shirasemaru.mineroyale12111.listener.GameListener
 import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
 import me.shirasemaru.mineroyale12111.listener.PlayerDeathListener
 import me.shirasemaru.mineroyale12111.listener.PlayerJoinListener
@@ -55,6 +56,11 @@ class Mineroyale12111 : JavaPlugin() {
 
         server.pluginManager.registerEvents(
             HealthRegainListener(gameManager),
+            this
+        )
+
+        server.pluginManager.registerEvents(
+            GameListener(gameManager),
             this
         )
 
