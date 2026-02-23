@@ -1,6 +1,5 @@
 package me.shirasemaru.mineroyale12111.config
 
-import me.shirasemaru.mineroyale12111.game.BorderPhase
 import org.bukkit.Bukkit
 import org.bukkit.World
 import org.bukkit.configuration.file.FileConfiguration
@@ -8,64 +7,143 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class ConfigManager(private val plugin: JavaPlugin) {
 
-    private val config: FileConfiguration
-        get() = plugin.config
+    lateinit var config: FileConfiguration
+        private set
 
-    val countdownSeconds: Int
-        get() = config.getInt("countdown-seconds", 30)
-
-    val gameDurationSeconds: Long
-        get() = config.getLong("game-duration-seconds", 1800L)
-
-    val teleportCenterX: Double
-        get() = config.getDouble("teleport-center-x", 0.0)
-
-    val teleportCenterZ: Double
-        get() = config.getDouble("teleport-center-z", 0.0)
-
-    val teleportRadius: Int
-        get() = config.getInt("teleport-radius", 1000)
-
-    val gameWorld: World
-        get() = Bukkit.getWorlds()[0]
-
-    val borderCenterX: Double
-        get() = config.getDouble("world-border.center.x", 0.0)
-
-    val borderCenterZ: Double
-        get() = config.getDouble("world-border.center.z", 0.0)
-
-    fun loadBorderPhases(): List<BorderPhase> {
-
-        val section = config.getConfigurationSection("world-border.phases")
-            ?: return emptyList()
-
-        return section.getKeys(false)
-            .mapNotNull { key ->
-                val phaseNumber = key.toIntOrNull() ?: return@mapNotNull null
-                val phaseSection = section.getConfigurationSection(key) ?: return@mapNotNull null
-
-                val startSize = phaseSection.getDouble("start-size")
-                val endSize = phaseSection.getDouble("end-size")
-                val duration = phaseSection.getLong("duration")
-
-                if (startSize <= 0 || endSize <= 0 || duration <= 0) {
-                    plugin.logger.warning("BorderPhase $phaseNumber に無効な値があります。スキップします。")
-                    return@mapNotNull null
-                }
-
-                if (startSize < endSize) {
-                    plugin.logger.warning("BorderPhase $phaseNumber は拡大設定になっています。スキップします。")
-                    return@mapNotNull null
-                }
-
-                BorderPhase(phaseNumber, startSize, endSize, duration)
-            }
-            .sortedBy { it.phaseNumber }
+    fun load() {
+        plugin.saveDefaultConfig()
+        plugin.reloadConfig()
+        config = plugin.config
     }
 
-    fun reload() {
-        plugin.reloadConfig()
-        plugin.logger.info("config.yml をリロードしました。")
+    // =========================
+    // World
+    // =========================
+
+    val worldName: String
+        get() = config.getString("world.name", "world")!!
+
+    val gameWorld: World
+        get() = Bukkit.getWorld(worldName)
+            ?: throw IllegalStateException("World '$worldName' not found")
+
+    val centerX: Double
+        get() = config.getDouble("world.center-x", 0.0)
+
+    val centerZ: Double
+        get() = config.getDouble("world.center-z", 0.0)
+
+    val initialBorderSize: Double
+        get() = config.getDouble("world.initial-border-size", 1000.0)
+
+    // BorderManager互換
+    val startSize: Double
+        get() = initialBorderSize
+
+    // =========================
+    // Border Basic
+    // =========================
+
+    val borderDamagePerSecond: Double
+        get() = config.getDouble("border.damage-per-second", 1.0)
+
+    val borderWarningDistance: Int
+        get() = config.getInt("border.warning-distance", 10)
+
+    val borderWarningTime: Int
+        get() = config.getInt("border.warning-time", 15)
+
+    // =========================
+    // Phases（wait対応 + 配列形式対応）
+    // =========================
+
+    data class BorderPhase(
+        val wait: Int,
+        val duration: Int,
+        val size: Double
+    )
+
+    val borderPhases: List<BorderPhase>
+        get() {
+            val phaseList = config.getMapList("border.phases")
+
+            if (phaseList.isEmpty()) {
+                plugin.logger.warning("No border phases configured.")
+                return emptyList()
+            }
+
+            return phaseList.mapIndexedNotNull { index, map ->
+
+                val wait = (map["wait"] as? Number)?.toInt() ?: 0
+                val duration = (map["duration"] as? Number)?.toInt()
+                val size = (map["size"] as? Number)?.toDouble()
+
+                if (duration == null || duration <= 0) {
+                    plugin.logger.warning("Invalid duration in border phase ${index + 1}")
+                    return@mapIndexedNotNull null
+                }
+
+                if (size == null || size <= 0) {
+                    plugin.logger.warning("Invalid size in border phase ${index + 1}")
+                    return@mapIndexedNotNull null
+                }
+
+                BorderPhase(wait, duration, size)
+            }
+        }
+
+    // BorderManager互換
+    fun loadBorderPhases(): List<BorderPhase> = borderPhases
+
+    // =========================
+    // Final Phase
+    // =========================
+
+    val enableFinalSmoothMove: Boolean
+        get() = config.getBoolean("border.final-phase.enable-smooth-move", false)
+
+    val finalMoveRange: Double
+        get() = config.getDouble("border.final-phase.move-range", 0.0)
+
+    val finalMoveDurationSeconds: Int
+        get() = config.getInt("border.final-phase.move-duration-seconds", 0)
+
+    // BorderManager互換
+    val enableFinalMove: Boolean
+        get() = enableFinalSmoothMove
+
+    val finalMoveDuration: Int
+        get() = finalMoveDurationSeconds
+
+    // =========================
+    // Enhanced Damage
+    // =========================
+
+    val enhancedDamageEnabled: Boolean
+        get() = config.getBoolean("border.enhanced-damage.enabled", false)
+
+    val enhancedBaseDamage: Double
+        get() = config.getDouble("border.enhanced-damage.base-damage", 1.0)
+
+    val enhancedIncreasePerSecond: Double
+        get() = config.getDouble("border.enhanced-damage.increase-per-second", 0.1)
+
+    val enhancedMaxDamage: Double
+        get() = config.getDouble("border.enhanced-damage.max-damage", 20.0)
+
+    // =========================
+    // 未使用（互換用）
+    // =========================
+
+    val battlefieldCenterRandomRange: Double
+        get() = 0.0
+
+    // =========================
+    // Utility
+    // =========================
+
+    fun resetBorderSize(world: World) {
+        world.worldBorder.setCenter(centerX, centerZ)
+        world.worldBorder.size = initialBorderSize
     }
 }

@@ -1,92 +1,326 @@
 package me.shirasemaru.mineroyale12111.game
 
+import me.shirasemaru.mineroyale12111.config.ConfigManager
 import org.bukkit.Bukkit
-import org.bukkit.WorldBorder
+import org.bukkit.Sound
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
+import kotlin.math.pow
+import kotlin.math.sqrt
+import kotlin.math.min
+import kotlin.random.Random
 
 class BorderManager(
     private val plugin: JavaPlugin,
-    private val configManager: me.shirasemaru.mineroyale12111.config.ConfigManager
+    private val configManager: ConfigManager
 ) {
 
-    private val world = Bukkit.getWorlds()[0]
-    private val border: WorldBorder = world.worldBorder
+    private val world get() = configManager.gameWorld
+    private val border get() = world.worldBorder
 
-    private var currentTask: BukkitTask? = null
+    private var shrinkTask: BukkitTask? = null
+    private var waitTask: BukkitTask? = null
+    private var moveTask: BukkitTask? = null
+    private var damageTask: BukkitTask? = null
+    private var phaseCountdownTask: BukkitTask? = null
 
+    private var currentCenterX = 0.0
+    private var currentCenterZ = 0.0
+
+    // フェーズ連動用
+    private var currentPhaseIndex = 0
+    private var remainingPhaseSeconds = 0
+    private var phaseState = "待機中"
+
+    private val outsideTime = mutableMapOf<Player, Int>()
+
+    /*
+     * =========================
+     * 初期化
+     * =========================
+     */
     fun initialize() {
-        border.setCenter(configManager.borderCenterX, configManager.borderCenterZ)
 
-        val phases = configManager.loadBorderPhases()
-        if (phases.isNotEmpty()) {
-            border.size = phases.first().startSize
-        }
+        stop()
+
+        currentCenterX = configManager.centerX
+        currentCenterZ = configManager.centerZ
+
+        border.setCenter(currentCenterX, currentCenterZ)
+        border.size = configManager.startSize
+
+        startBorderDamage()
     }
 
-    fun runPhases(phases: List<BorderPhase>, onComplete: () -> Unit) {
-        runPhaseSequentially(phases, 0, onComplete)
+    /*
+     * =========================
+     * フェーズ実行
+     * =========================
+     */
+    fun runPhases(onComplete: () -> Unit) {
+        runPhase(configManager.borderPhases, 0, onComplete)
     }
 
-    private fun runPhaseSequentially(
-        phases: List<BorderPhase>,
+    private fun runPhase(
+        phases: List<ConfigManager.BorderPhase>,
         index: Int,
         onComplete: () -> Unit
     ) {
+
         if (index >= phases.size) {
             onComplete()
             return
         }
 
+        currentPhaseIndex = index
         val phase = phases[index]
 
-        startSmoothShrink(
-            phase.startSize,
-            phase.endSize,
-            phase.durationSeconds
-        ) {
-            runPhaseSequentially(phases, index + 1, onComplete)
+        announcePhase(index, phase)
+
+        // 待機フェーズ
+        if (phase.wait > 0) {
+
+            phaseState = "待機中"
+            startPhaseCountdown(phase.wait)
+
+            waitTask?.cancel()
+            waitTask = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                startShrinkPhase(phases, index, onComplete)
+            }, phase.wait * 20L)
+
+        } else {
+            startShrinkPhase(phases, index, onComplete)
         }
     }
 
-    private fun startSmoothShrink(
-        startSize: Double,
-        endSize: Double,
-        durationSeconds: Long,
+    /*
+     * =========================
+     * フェーズアナウンス
+     * =========================
+     */
+    private fun announcePhase(
+        index: Int,
+        phase: ConfigManager.BorderPhase
+    ) {
+
+        Bukkit.broadcastMessage("§6========== フェーズ ${index + 1} ==========")
+
+        if (phase.wait > 0) {
+            Bukkit.broadcastMessage("§e${phase.wait}秒間の待機時間")
+        }
+
+        Bukkit.broadcastMessage("§cボーダーが §f${phase.size} §cまで縮小")
+        Bukkit.broadcastMessage("§7収縮時間: §f${phase.duration}秒")
+
+        // ベル音
+        world.players.forEach {
+            it.playSound(it.location, Sound.BLOCK_BELL_USE, 1.0f, 1.0f)
+        }
+    }
+
+    /*
+     * =========================
+     * 縮小処理
+     * =========================
+     */
+    private fun startShrinkPhase(
+        phases: List<ConfigManager.BorderPhase>,
+        index: Int,
+        onComplete: () -> Unit
+    ) {
+
+        val phase = phases[index]
+        val startSize = border.size
+        val endSize = phase.size
+
+        phaseState = "縮小中"
+        startPhaseCountdown(phase.duration)
+
+        // 最終フェーズなら中心移動
+        if (index == phases.lastIndex && configManager.enableFinalMove) {
+            smoothMoveCenter(
+                configManager.finalMoveRange,
+                configManager.finalMoveDuration.toLong()
+            )
+        }
+
+        startShrink(startSize, endSize, phase.duration.toLong()) {
+            runPhase(phases, index + 1, onComplete)
+        }
+    }
+
+    private fun startShrink(
+        start: Double,
+        end: Double,
+        seconds: Long,
         onFinish: () -> Unit
     ) {
-        currentTask?.cancel()
 
-        val totalTicks = durationSeconds * 20
-        val sizeDiff = startSize - endSize
-        val shrinkPerTick = sizeDiff / totalTicks.toDouble()
+        shrinkTask?.cancel()
 
-        var currentSize = startSize
-        var ticks = 0L
+        val ticks = seconds * 20
+        if (ticks <= 0) {
+            border.size = end
+            onFinish()
+            return
+        }
 
-        currentTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+        val diff = start - end
+        val perTick = diff / ticks
 
-            if (ticks >= totalTicks) {
-                border.size = endSize
-                currentTask?.cancel()
+        var current = start
+        var count = 0L
+
+        shrinkTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            if (count >= ticks) {
+                border.size = end
+                shrinkTask?.cancel()
                 onFinish()
                 return@Runnable
             }
 
-            currentSize -= shrinkPerTick
-            border.size = currentSize
-
-            ticks++
+            current -= perTick
+            border.size = current
+            count++
 
         }, 0L, 1L)
     }
 
+    /*
+     * =========================
+     * フェーズカウントダウン
+     * =========================
+     */
+    private fun startPhaseCountdown(seconds: Int) {
+
+        phaseCountdownTask?.cancel()
+
+        remainingPhaseSeconds = seconds
+
+        phaseCountdownTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            if (remainingPhaseSeconds <= 0) {
+                phaseCountdownTask?.cancel()
+                return@Runnable
+            }
+
+            remainingPhaseSeconds--
+
+        }, 20L, 20L)
+    }
+
+    /*
+     * =========================
+     * 最終フェーズ中心移動
+     * =========================
+     */
+    private fun smoothMoveCenter(range: Double, seconds: Long) {
+
+        moveTask?.cancel()
+
+        val targetX = currentCenterX + Random.nextDouble(-range, range)
+        val targetZ = currentCenterZ + Random.nextDouble(-range, range)
+
+        val ticks = seconds * 20
+        if (ticks <= 0) return
+
+        val stepX = (targetX - currentCenterX) / ticks
+        val stepZ = (targetZ - currentCenterZ) / ticks
+
+        var count = 0L
+
+        moveTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            if (count >= ticks) {
+                border.setCenter(targetX, targetZ)
+                currentCenterX = targetX
+                currentCenterZ = targetZ
+                moveTask?.cancel()
+                return@Runnable
+            }
+
+            currentCenterX += stepX
+            currentCenterZ += stepZ
+            border.setCenter(currentCenterX, currentCenterZ)
+
+            count++
+
+        }, 0L, 1L)
+    }
+
+    /*
+     * =========================
+     * ボーダー外ダメージ強化
+     * =========================
+     */
+    private fun startBorderDamage() {
+
+        damageTask?.cancel()
+
+        damageTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            world.players.forEach { player ->
+
+                if (isOutsideBorder(player)) {
+
+                    val time = outsideTime.getOrDefault(player, 0) + 1
+                    outsideTime[player] = time
+
+                    val damage = min(
+                        configManager.enhancedBaseDamage +
+                                configManager.enhancedIncreasePerSecond * time,
+                        configManager.enhancedMaxDamage
+                    )
+
+                    player.damage(damage)
+
+                } else {
+                    outsideTime.remove(player)
+                }
+            }
+
+        }, 20L, 20L)
+    }
+
+    private fun isOutsideBorder(player: Player): Boolean {
+
+        val dx = player.location.x - currentCenterX
+        val dz = player.location.z - currentCenterZ
+
+        val distance = sqrt(dx.pow(2) + dz.pow(2))
+        return distance > border.size / 2
+    }
+
+    /*
+     * =========================
+     * 停止・リセット
+     * =========================
+     */
     fun stop() {
-        currentTask?.cancel()
+        shrinkTask?.cancel()
+        waitTask?.cancel()
+        moveTask?.cancel()
+        damageTask?.cancel()
+        phaseCountdownTask?.cancel()
+        outsideTime.clear()
     }
 
     fun reset() {
         stop()
-        border.size = 1000.0
+        currentCenterX = configManager.centerX
+        currentCenterZ = configManager.centerZ
+        border.setCenter(currentCenterX, currentCenterZ)
+        border.size = configManager.startSize
     }
+
+    // Scoreboard用Getter
+    fun getCurrentPhaseIndex() = currentPhaseIndex + 1
+    fun getTotalPhases() = configManager.borderPhases.size
+    fun getRemainingPhaseSeconds() = remainingPhaseSeconds
+    fun getPhaseState() = phaseState
+
+    fun getCurrentCenterX() = currentCenterX
+    fun getCurrentCenterZ() = currentCenterZ
 }

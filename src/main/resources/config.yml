@@ -1,34 +1,63 @@
-countdown-seconds: 30
-game-duration-seconds: 1800
+# =========================
+# Mineroyale12111 Config
+# =========================
 
-teleportRange: 500000
-teleport-center-x: 0
-teleport-center-z: 0
-teleport-radius: 1000
+game:
+  min-players: 2
+  max-players: 20
+  countdown-seconds: 30
 
-deathInventoryUpdateDelayTicks: 20
+world:
+  name: world
+  center-x: 0
+  center-z: 0
+  initial-border-size: 1000
 
-world-border:
-  center:
-    x: 0
-    z: 0
-
+border:
   damage-per-second: 1.0
-  warning-distance: 5
-  warning-time: 10
+  warning-distance: 10
+  warning-time: 5
 
+  # =========================
+  # フェーズ設定
+  # wait = 縮小開始までの待機時間（秒）
+  # duration = 縮小にかける時間（秒）
+  # size = 縮小後の目標サイズ
+  # =========================
   phases:
-    1:
-      start-size: 500
-      end-size: 300
+    - wait: 60
       duration: 300
+      size: 600
 
-    2:
-      start-size: 300
-      end-size: 150
-      duration: 300
+    - wait: 45
+      duration: 240
+      size: 400
 
-    3:
-      start-size: 150
-      end-size: 50
-      duration: 300
+    - wait: 30
+      duration: 180
+      size: 200
+
+    - wait: 20
+      duration: 120
+      size: 100
+
+    - wait: 10
+      duration: 90
+      size: 50
+
+  # =========================
+  # 最終円特別挙動（未実装）
+  # =========================
+  final-phase:
+    enable-smooth-move: true
+    move-range: 40
+    move-duration-seconds: 20
+
+  # =========================
+  # ボーダー外ダメージ強化
+  # =========================
+  enhanced-damage:
+    enabled: true
+    base-damage: 1.0
+    increase-per-second: 0.5
+    max-damage: 10.0

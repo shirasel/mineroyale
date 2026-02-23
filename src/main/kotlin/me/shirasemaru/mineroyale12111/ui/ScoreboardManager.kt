@@ -27,14 +27,21 @@ class ScoreboardManager {
         aliveCount: Int,
         remainingGameSeconds: Int,
         currentPhase: Int,
+        totalPhases: Int,
+        phaseState: String,
         remainingPhaseSeconds: Int
     ) {
         clear()
 
-        objective.getScore("§7状態: §e$gameState").score = 6
-        objective.getScore("§7生存者: §e$aliveCount").score = 5
-        objective.getScore("§7フェーズ: §e$currentPhase").score = 4
-        objective.getScore("§7フェーズ残り: §e${formatTime(remainingPhaseSeconds)}").score = 3
+        objective.getScore("§7状態: §e$gameState").score = 9
+        objective.getScore("§7生存者: §e$aliveCount").score = 8
+        objective.getScore(" ").score = 7
+
+        objective.getScore("§7フェーズ: §e$currentPhase / $totalPhases").score = 6
+        objective.getScore("§7状態: §e$phaseState").score = 5
+        objective.getScore("§7フェーズ残り: §e${formatTime(remainingPhaseSeconds)}").score = 4
+        objective.getScore("  ").score = 3
+
         objective.getScore("§7全体残り: §e${formatTime(remainingGameSeconds)}").score = 2
 
         Bukkit.getOnlinePlayers().forEach {

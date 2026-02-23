@@ -2,15 +2,12 @@ package me.shirasemaru.mineroyale12111.game
 
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
-import org.bukkit.Bukkit
-import org.bukkit.Location
+import org.bukkit.*
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
-import java.util.*
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.*
+import kotlin.random.Random
 
 class GameManager(
     val plugin: JavaPlugin,
@@ -26,9 +23,12 @@ class GameManager(
 
     private var gameTask: BukkitTask? = null
     private var remainingGameSeconds: Int = 0
-    private var currentPhase: Int = 0
-    private var remainingPhaseSeconds: Int = 0
 
+    /*
+     * =========================
+     * ゲーム開始
+     * =========================
+     */
     fun startGame() {
 
         if (state != GameState.WAITING) return
@@ -37,18 +37,15 @@ class GameManager(
 
         playerManager.registerAllOnline()
 
-        teleportPlayersRandomly() // 追加
-
         borderManager.initialize()
+        teleportPlayersSafely()
 
-        val phases = configManager.loadBorderPhases()
-
-        remainingGameSeconds = configManager.gameDurationSeconds.toInt()
+        // 🔥 フェーズ合計時間からゲーム時間算出
+        remainingGameSeconds = calculateTotalGameTime()
 
         startGameTimer()
-        startPhaseTracking(phases)
 
-        borderManager.runPhases(phases) {
+        borderManager.runPhases {
             endGame(null)
         }
 
@@ -57,34 +54,85 @@ class GameManager(
 
     /*
      * =========================
-     * ランダムテレポート
+     * フェーズ合計時間計算
      * =========================
      */
-    private fun teleportPlayersRandomly() {
+    private fun calculateTotalGameTime(): Int {
+
+        return configManager.borderPhases.sumOf {
+            it.wait + it.duration
+        }
+    }
+
+    /*
+     * =========================
+     * 安全テレポート
+     * =========================
+     */
+    private fun teleportPlayersSafely() {
 
         val world = configManager.gameWorld
-        val centerX = configManager.teleportCenterX
-        val centerZ = configManager.teleportCenterZ
-        val radius = configManager.teleportRadius
+        val centerX = borderManager.getCurrentCenterX()
+        val centerZ = borderManager.getCurrentCenterZ()
+
+        val radius = configManager.startSize / 2 - 5
+        val minDistance = 15.0
+
+        val usedLocations = mutableListOf<Location>()
 
         playerManager.getAlivePlayers().forEach { gamePlayer ->
 
-            val player: Player = gamePlayer.player ?: return@forEach
+            val player = gamePlayer.player ?: return@forEach
 
-            val angle = Random().nextDouble() * 2 * Math.PI
-            val distance = sqrt(Random().nextDouble()) * radius
+            var location: Location
+            var attempts = 0
 
-            val x = centerX + cos(angle) * distance
-            val z = centerZ + sin(angle) * distance
+            do {
+                location = generateSafeLocation(world, centerX, centerZ, radius)
+                attempts++
+            } while (!isFarEnough(location, usedLocations, minDistance) && attempts < 30)
 
-            val y = world.getHighestBlockYAt(x.toInt(), z.toInt()) + 1
-
-            val location = Location(world, x, y.toDouble(), z)
-
+            usedLocations.add(location)
             player.teleport(location)
         }
     }
 
+    private fun generateSafeLocation(
+        world: World,
+        centerX: Double,
+        centerZ: Double,
+        radius: Double
+    ): Location {
+
+        val angle = Random.nextDouble() * 2 * PI
+        val distance = sqrt(Random.nextDouble()) * radius
+
+        val x = centerX + cos(angle) * distance
+        val z = centerZ + sin(angle) * distance
+
+        var y = world.getHighestBlockYAt(x.toInt(), z.toInt())
+        val block = world.getBlockAt(x.toInt(), y, z.toInt())
+
+        if (block.type == Material.LAVA || block.type == Material.WATER) {
+            y += 2
+        }
+
+        return Location(world, x, (y + 1).toDouble(), z)
+    }
+
+    private fun isFarEnough(
+        location: Location,
+        others: List<Location>,
+        minDistance: Double
+    ): Boolean {
+        return others.none { it.distance(location) < minDistance }
+    }
+
+    /*
+     * =========================
+     * ゲームタイマー
+     * =========================
+     */
     private fun startGameTimer() {
 
         gameTask?.cancel()
@@ -97,60 +145,48 @@ class GameManager(
             }
 
             remainingGameSeconds--
-            remainingPhaseSeconds--
 
             scoreboardManager.updateAll(
                 state,
                 playerManager.getAlivePlayers().size,
                 remainingGameSeconds,
-                currentPhase,
-                remainingPhaseSeconds.coerceAtLeast(0)
+                borderManager.getCurrentPhaseIndex(),
+                borderManager.getTotalPhases(),
+                borderManager.getPhaseState(),
+                borderManager.getRemainingPhaseSeconds()
             )
 
         }, 20L, 20L)
     }
 
-    private fun startPhaseTracking(phases: List<BorderPhase>) {
-
-        var accumulated = 0
-        currentPhase = 1
-
-        remainingPhaseSeconds = phases.firstOrNull()?.durationSeconds?.toInt() ?: 0
-
-        phases.forEachIndexed { index, phase ->
-            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-                currentPhase = index + 1
-                remainingPhaseSeconds = phase.durationSeconds.toInt()
-            }, accumulated * 20L)
-
-            accumulated += phase.durationSeconds.toInt()
-        }
-    }
-
+    /*
+     * =========================
+     * 勝利判定
+     * =========================
+     */
     fun handleDeath(player: Player) {
 
         if (state != GameState.RUNNING) return
 
-        val uuid = player.uniqueId
-
-        if (!playerManager.isAlive(uuid)) return
-
-        playerManager.markDead(uuid)
-        player.sendMessage("§cあなたは脱落しました。")
-
+        playerManager.markDead(player.uniqueId)
         checkWinCondition()
     }
 
     private fun checkWinCondition() {
 
-        val alivePlayers = playerManager.getAlivePlayers()
+        val alive = playerManager.getAlivePlayers()
 
-        when (alivePlayers.size) {
-            1 -> endGame(alivePlayers.first())
+        when (alive.size) {
+            1 -> endGame(alive.first())
             0 -> endGame(null)
         }
     }
 
+    /*
+     * =========================
+     * 終了処理
+     * =========================
+     */
     fun endGame(winner: GamePlayer?) {
 
         if (state == GameState.ENDING) return
@@ -160,11 +196,12 @@ class GameManager(
         gameTask?.cancel()
         borderManager.stop()
 
-        if (winner != null) {
-            Bukkit.broadcastMessage("§6勝者: §a${winner.player?.name}")
-        } else {
-            Bukkit.broadcastMessage("§6勝者なし。")
-        }
+        Bukkit.broadcastMessage(
+            if (winner != null)
+                "§6勝者: §a${winner.player?.name}"
+            else
+                "§6勝者なし"
+        )
 
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             resetGame()
@@ -172,12 +209,8 @@ class GameManager(
     }
 
     private fun resetGame() {
-
         borderManager.reset()
         playerManager.clear()
-
         state = GameState.WAITING
-
-        Bukkit.broadcastMessage("§7ゲームがリセットされました。")
     }
 }
