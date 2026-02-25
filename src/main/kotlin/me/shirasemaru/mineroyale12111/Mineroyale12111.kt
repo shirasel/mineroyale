@@ -5,9 +5,7 @@ import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameManager
 import me.shirasemaru.mineroyale12111.listener.GameListener
 import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
-import me.shirasemaru.mineroyale12111.listener.PlayerDeathListener
 import me.shirasemaru.mineroyale12111.listener.PlayerJoinListener
-import me.shirasemaru.mineroyale12111.listener.PlayerQuitListener
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -24,6 +22,7 @@ class Mineroyale12111 : JavaPlugin() {
          ========================== */
         saveDefaultConfig()
         configManager = ConfigManager(this)
+        configManager.load()
 
         /* ==========================
            マネージャー初期化（順番重要）
@@ -39,15 +38,6 @@ class Mineroyale12111 : JavaPlugin() {
         /* ==========================
            Listener登録
          ========================== */
-        server.pluginManager.registerEvents(
-            PlayerDeathListener(gameManager),
-            this
-        )
-
-        server.pluginManager.registerEvents(
-            PlayerQuitListener(gameManager),
-            this
-        )
 
         server.pluginManager.registerEvents(
             PlayerJoinListener(gameManager),

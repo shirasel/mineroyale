@@ -146,4 +146,9 @@ class ConfigManager(private val plugin: JavaPlugin) {
         world.worldBorder.setCenter(centerX, centerZ)
         world.worldBorder.size = initialBorderSize
     }
+
+    fun reload() {
+        plugin.reloadConfig()
+        load()
+    }
 }

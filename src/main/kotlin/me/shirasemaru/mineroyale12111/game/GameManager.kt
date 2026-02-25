@@ -40,9 +40,7 @@ class GameManager(
         borderManager.initialize()
         teleportPlayersSafely()
 
-        // 🔥 フェーズ合計時間からゲーム時間算出
         remainingGameSeconds = calculateTotalGameTime()
-
         startGameTimer()
 
         borderManager.runPhases {
@@ -54,14 +52,11 @@ class GameManager(
 
     /*
      * =========================
-     * フェーズ合計時間計算
+     * フェーズ合計時間
      * =========================
      */
     private fun calculateTotalGameTime(): Int {
-
-        return configManager.borderPhases.sumOf {
-            it.wait + it.duration
-        }
+        return configManager.borderPhases.sumOf { it.wait + it.duration }
     }
 
     /*
@@ -139,12 +134,10 @@ class GameManager(
 
         gameTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
 
-            if (remainingGameSeconds <= 0) {
-                endGame(null)
-                return@Runnable
+            // 🔥 最終フェーズ後は時間切れで終了しない
+            if (remainingGameSeconds > 0) {
+                remainingGameSeconds--
             }
-
-            remainingGameSeconds--
 
             scoreboardManager.updateAll(
                 state,
@@ -168,6 +161,10 @@ class GameManager(
         forceEliminate(player)
     }
 
+    fun isAlive(uuid: java.util.UUID): Boolean {
+        return playerManager.isAlive(uuid)
+    }
+
     private fun checkWinCondition() {
 
         val alive = playerManager.getAlivePlayers()
@@ -179,13 +176,12 @@ class GameManager(
     }
 
     private fun handleFinalPhaseFinished() {
-
         Bukkit.broadcastMessage("§c最終フェーズ突入！最後の1人になるまで戦え！")
     }
 
     /*
      * =========================
-     * 勝敗判定制御
+     * 脱落処理
      * =========================
      */
     fun forceEliminate(player: Player) {
@@ -195,7 +191,6 @@ class GameManager(
 
         playerManager.markDead(player.uniqueId)
 
-        // Spectator化
         makeSpectator(player)
 
         Bukkit.broadcastMessage("§c${player.name} はゲームから脱落しました")
@@ -206,14 +201,13 @@ class GameManager(
     private fun makeSpectator(player: Player) {
 
         player.gameMode = GameMode.SPECTATOR
-        player.isFlying = true
         player.allowFlight = true
+        player.isFlying = true
 
-        // 体力全回復（念のため）
         player.health = player.maxHealth
-
-        // 火やエフェクト消去
+        player.foodLevel = 20
         player.fireTicks = 0
+
         player.activePotionEffects.forEach {
             player.removePotionEffect(it.type)
         }
@@ -234,8 +228,8 @@ class GameManager(
         borderManager.stop()
 
         Bukkit.broadcastMessage(
-            if (winner != null)
-                "§6勝者: §a${winner.player?.name}"
+            if (winner?.player != null)
+                "§6勝者: §a${winner.player!!.name}"
             else
                 "§6勝者なし"
         )
@@ -254,6 +248,9 @@ class GameManager(
             player.gameMode = GameMode.SURVIVAL
             player.allowFlight = false
             player.isFlying = false
+            player.health = player.maxHealth
+            player.foodLevel = 20
+            player.fireTicks = 0
         }
 
         state = GameState.WAITING

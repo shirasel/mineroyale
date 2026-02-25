@@ -1,6 +1,7 @@
 package me.shirasemaru.mineroyale12111.listener
 
 import me.shirasemaru.mineroyale12111.game.GameManager
+import me.shirasemaru.mineroyale12111.game.GameState
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
@@ -13,17 +14,25 @@ class GameListener(
 
     @EventHandler
     fun onDeath(event: PlayerDeathEvent) {
-        val player = event.entity
-        gameManager.handleDeath(player)
+
+        if (gameManager.state != GameState.RUNNING) return
+
+        gameManager.handleDeath(event.entity)
     }
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
+
+        if (gameManager.state != GameState.RUNNING) return
+
         gameManager.forceEliminate(event.player)
     }
 
     @EventHandler
     fun onKick(event: PlayerKickEvent) {
+
+        if (gameManager.state != GameState.RUNNING) return
+
         gameManager.forceEliminate(event.player)
     }
 }
