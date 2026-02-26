@@ -9,8 +9,12 @@ game:
 
 world:
   name: world
-  center-x: 0
-  center-z: 0
+
+  # ランダム中心の基準範囲（±この値）
+  # 例: 2000 → -2000 ～ +2000 の範囲内で中心抽選
+  random-center-range: 2000
+
+  # 初期ボーダーサイズ
   initial-border-size: 1000
 
 border:
@@ -46,7 +50,7 @@ border:
       size: 50
 
   # =========================
-  # 最終円特別挙動（未実装）
+  # 最終円特別挙動
   # =========================
   final-phase:
     enable-smooth-move: true

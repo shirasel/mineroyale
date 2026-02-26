@@ -28,7 +28,6 @@ class BorderManager(
     private var currentCenterX = 0.0
     private var currentCenterZ = 0.0
 
-    // フェーズ連動用
     private var currentPhaseIndex = 0
     private var remainingPhaseSeconds = 0
     private var phaseState = "待機中"
@@ -37,15 +36,20 @@ class BorderManager(
 
     /*
      * =========================
-     * 初期化
+     * 初期化（ランダム中心）
      * =========================
      */
     fun initialize() {
 
         stop()
 
-        currentCenterX = configManager.centerX
-        currentCenterZ = configManager.centerZ
+        val startRadius = configManager.startSize / 2
+        val worldLimit = configManager.randomCenterRange  // ← configで指定する推奨
+
+        val max = worldLimit - startRadius
+
+        currentCenterX = Random.nextDouble(-max, max)
+        currentCenterZ = Random.nextDouble(-max, max)
 
         border.setCenter(currentCenterX, currentCenterZ)
         border.size = configManager.startSize
@@ -78,7 +82,6 @@ class BorderManager(
 
         announcePhase(index, phase)
 
-        // 待機フェーズ
         if (phase.wait > 0) {
 
             phaseState = "待機中"
@@ -94,11 +97,6 @@ class BorderManager(
         }
     }
 
-    /*
-     * =========================
-     * フェーズアナウンス
-     * =========================
-     */
     private fun announcePhase(
         index: Int,
         phase: ConfigManager.BorderPhase
@@ -113,17 +111,11 @@ class BorderManager(
         Bukkit.broadcastMessage("§cボーダーが §f${phase.size} §cまで縮小")
         Bukkit.broadcastMessage("§7収縮時間: §f${phase.duration}秒")
 
-        // ベル音
         world.players.forEach {
             it.playSound(it.location, Sound.BLOCK_BELL_USE, 1.0f, 1.0f)
         }
     }
 
-    /*
-     * =========================
-     * 縮小処理
-     * =========================
-     */
     private fun startShrinkPhase(
         phases: List<ConfigManager.BorderPhase>,
         index: Int,
@@ -137,7 +129,6 @@ class BorderManager(
         phaseState = "縮小中"
         startPhaseCountdown(phase.duration)
 
-        // 最終フェーズなら中心移動
         if (index == phases.lastIndex && configManager.enableFinalMove) {
             smoothMoveCenter(
                 configManager.finalMoveRange,
@@ -188,11 +179,6 @@ class BorderManager(
         }, 0L, 1L)
     }
 
-    /*
-     * =========================
-     * フェーズカウントダウン
-     * =========================
-     */
     private fun startPhaseCountdown(seconds: Int) {
 
         phaseCountdownTask?.cancel()
@@ -252,7 +238,7 @@ class BorderManager(
 
     /*
      * =========================
-     * ボーダー外ダメージ強化
+     * ボーダー外ダメージ
      * =========================
      */
     private fun startBorderDamage() {
@@ -309,13 +295,9 @@ class BorderManager(
 
     fun reset() {
         stop()
-        currentCenterX = configManager.centerX
-        currentCenterZ = configManager.centerZ
-        border.setCenter(currentCenterX, currentCenterZ)
         border.size = configManager.startSize
     }
 
-    // Scoreboard用Getter
     fun getCurrentPhaseIndex() = currentPhaseIndex + 1
     fun getTotalPhases() = configManager.borderPhases.size
     fun getRemainingPhaseSeconds() = remainingPhaseSeconds

@@ -27,11 +27,12 @@ class ConfigManager(private val plugin: JavaPlugin) {
         get() = Bukkit.getWorld(worldName)
             ?: throw IllegalStateException("World '$worldName' not found")
 
-    val centerX: Double
-        get() = config.getDouble("world.center-x", 0.0)
-
-    val centerZ: Double
-        get() = config.getDouble("world.center-z", 0.0)
+    /**
+     * ランダム中心抽選範囲（±この値）
+     * 例: 2000 → -2000 ～ +2000
+     */
+    val randomCenterRange: Double
+        get() = config.getDouble("world.random-center-range", 2000.0)
 
     val initialBorderSize: Double
         get() = config.getDouble("world.initial-border-size", 1000.0)
@@ -51,10 +52,10 @@ class ConfigManager(private val plugin: JavaPlugin) {
         get() = config.getInt("border.warning-distance", 10)
 
     val borderWarningTime: Int
-        get() = config.getInt("border.warning-time", 15)
+        get() = config.getInt("border.warning-time", 5)
 
     // =========================
-    // Phases（wait対応 + 配列形式対応）
+    // Phases
     // =========================
 
     data class BorderPhase(
@@ -65,6 +66,7 @@ class ConfigManager(private val plugin: JavaPlugin) {
 
     val borderPhases: List<BorderPhase>
         get() {
+
             val phaseList = config.getMapList("border.phases")
 
             if (phaseList.isEmpty()) {
@@ -92,7 +94,6 @@ class ConfigManager(private val plugin: JavaPlugin) {
             }
         }
 
-    // BorderManager互換
     fun loadBorderPhases(): List<BorderPhase> = borderPhases
 
     // =========================
@@ -126,24 +127,20 @@ class ConfigManager(private val plugin: JavaPlugin) {
         get() = config.getDouble("border.enhanced-damage.base-damage", 1.0)
 
     val enhancedIncreasePerSecond: Double
-        get() = config.getDouble("border.enhanced-damage.increase-per-second", 0.1)
+        get() = config.getDouble("border.enhanced-damage.increase-per-second", 0.5)
 
     val enhancedMaxDamage: Double
-        get() = config.getDouble("border.enhanced-damage.max-damage", 20.0)
-
-    // =========================
-    // 未使用（互換用）
-    // =========================
-
-    val battlefieldCenterRandomRange: Double
-        get() = 0.0
+        get() = config.getDouble("border.enhanced-damage.max-damage", 10.0)
 
     // =========================
     // Utility
     // =========================
 
+    /**
+     * ボーダーサイズのみリセット
+     * 中心はBorderManager側でランダム再設定される
+     */
     fun resetBorderSize(world: World) {
-        world.worldBorder.setCenter(centerX, centerZ)
         world.worldBorder.size = initialBorderSize
     }
 
