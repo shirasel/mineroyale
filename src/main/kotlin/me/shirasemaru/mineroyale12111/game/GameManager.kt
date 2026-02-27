@@ -177,9 +177,16 @@ class GameManager(
 
         gameTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
 
-            // 🔥 最終フェーズ後は時間切れで終了しない
+            if (state != GameState.RUNNING) return@Runnable
+
             if (remainingGameSeconds > 0) {
                 remainingGameSeconds--
+            }
+
+            // ⏰ 時間切れ判定
+            if (remainingGameSeconds <= 0) {
+                handleTimeUp()
+                return@Runnable
             }
 
             scoreboardManager.updateAll(
@@ -213,13 +220,27 @@ class GameManager(
         val alive = playerManager.getAlivePlayers()
 
         when (alive.size) {
-            1 -> endGame(alive.first())
+            1 -> endGame(listOf(alive.first()))
             0 -> endGame(null)
         }
     }
 
     private fun handleFinalPhaseFinished() {
-        Bukkit.broadcastMessage("§c最終フェーズ突入！最後の1人になるまで戦え！")
+        Bukkit.broadcastMessage("§c最終フェーズ突入！")
+    }
+
+    private fun handleTimeUp() {
+
+        if (state != GameState.RUNNING) return
+
+        Bukkit.broadcastMessage("§c制限時間終了！")
+
+        val alivePlayers = playerManager.getAlivePlayers()
+
+        when (alivePlayers.size) {
+            0 -> endGame(null)
+            else -> endGame(alivePlayers) // 生存者全員勝利
+        }
     }
 
     /*
@@ -261,7 +282,7 @@ class GameManager(
      * 終了処理
      * =========================
      */
-    fun endGame(winner: GamePlayer?) {
+    fun endGame(winners: List<GamePlayer>?) {
 
         if (state == GameState.ENDING) return
 
@@ -270,12 +291,20 @@ class GameManager(
         gameTask?.cancel()
         borderManager.stop()
 
-        Bukkit.broadcastMessage(
-            if (winner?.player != null)
-                "§6勝者: §a${winner.player!!.name}"
-            else
-                "§6勝者なし"
-        )
+        when {
+            winners == null || winners.isEmpty() -> {
+                Bukkit.broadcastMessage("§6勝者なし")
+            }
+
+            winners.size == 1 -> {
+                Bukkit.broadcastMessage("§6勝者: §a${winners.first().player?.name}")
+            }
+
+            else -> {
+                val names = winners.mapNotNull { it.player?.name }
+                Bukkit.broadcastMessage("§6勝者（複数）: §a${names.joinToString(", ")}")
+            }
+        }
 
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             resetGame()
