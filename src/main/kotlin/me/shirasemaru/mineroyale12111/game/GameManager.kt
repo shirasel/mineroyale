@@ -99,20 +99,63 @@ class GameManager(
         radius: Double
     ): Location {
 
-        val angle = Random.nextDouble() * 2 * PI
-        val distance = sqrt(Random.nextDouble()) * radius
+        repeat(50) { // 最大50回試行
 
-        val x = centerX + cos(angle) * distance
-        val z = centerZ + sin(angle) * distance
+            val angle = Random.nextDouble() * 2 * PI
+            val distance = sqrt(Random.nextDouble()) * radius
 
-        var y = world.getHighestBlockYAt(x.toInt(), z.toInt())
-        val block = world.getBlockAt(x.toInt(), y, z.toInt())
+            val x = centerX + cos(angle) * distance
+            val z = centerZ + sin(angle) * distance
 
-        if (block.type == Material.LAVA || block.type == Material.WATER) {
-            y += 2
+            val blockX = x.toInt()
+            val blockZ = z.toInt()
+
+            val highestY = world.getHighestBlockYAt(blockX, blockZ)
+            val groundBlock = world.getBlockAt(blockX, highestY - 1, blockZ)
+            val feetBlock = world.getBlockAt(blockX, highestY, blockZ)
+            val headBlock = world.getBlockAt(blockX, highestY + 1, blockZ)
+
+            if (isSafeGround(groundBlock)
+                && feetBlock.type.isAir
+                && headBlock.type.isAir
+                && isNotInHole(world, blockX, highestY, blockZ)
+            ) {
+                return Location(world, blockX + 0.5, highestY.toDouble(), blockZ + 0.5)
+            }
         }
 
-        return Location(world, x, (y + 1).toDouble(), z)
+        // 最悪 fallback
+        return Location(world, centerX, world.getHighestBlockYAt(centerX.toInt(), centerZ.toInt()).toDouble(), centerZ)
+    }
+
+    private fun isSafeGround(block: org.bukkit.block.Block): Boolean {
+
+        if (!block.type.isSolid) return false
+
+        return when (block.type) {
+            Material.LAVA,
+            Material.MAGMA_BLOCK,
+            Material.CACTUS,
+            Material.FIRE,
+            Material.CAMPFIRE,
+            Material.SOUL_CAMPFIRE -> false
+
+            else -> true
+        }
+    }
+
+    private fun isNotInHole(world: World, x: Int, y: Int, z: Int): Boolean {
+
+        val north = world.getBlockAt(x, y, z - 1)
+        val south = world.getBlockAt(x, y, z + 1)
+        val east = world.getBlockAt(x + 1, y, z)
+        val west = world.getBlockAt(x - 1, y, z)
+
+        val solidCount = listOf(north, south, east, west)
+            .count { it.type.isSolid }
+
+        // 4方向全部壁なら1ブロック穴とみなす
+        return solidCount < 4
     }
 
     private fun isFarEnough(
