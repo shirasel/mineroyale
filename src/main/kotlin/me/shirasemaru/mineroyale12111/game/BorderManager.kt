@@ -294,8 +294,22 @@ class BorderManager(
     }
 
     fun reset() {
+
         stop()
-        border.size = configManager.startSize
+
+        val world = configManager.gameWorld
+        val border = world.worldBorder
+
+        // バニラ初期値にリセット
+        border.setCenter(0.0, 0.0)
+        border.size = 29_999_984.0
+
+        // ダメージ系も念のため初期化
+        border.damageAmount = 0.2
+        border.damageBuffer = 5.0
+
+        // 警告初期値
+        border.warningDistance = 5
     }
 
     fun getCurrentPhaseIndex() = currentPhaseIndex + 1

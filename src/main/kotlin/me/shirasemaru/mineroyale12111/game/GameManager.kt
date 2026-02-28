@@ -292,7 +292,7 @@ class GameManager(
         borderManager.stop()
 
         when {
-            winners == null || winners.isEmpty() -> {
+            winners.isNullOrEmpty() -> {
                 Bukkit.broadcastMessage("§6勝者なし")
             }
 
@@ -313,18 +313,44 @@ class GameManager(
 
     private fun resetGame() {
 
+        state = GameState.WAITING
+
+        gameTask?.cancel()
+        gameTask = null
+
+        remainingGameSeconds = 0  // ← これ追加
+
         borderManager.reset()
         playerManager.clear()
 
         Bukkit.getOnlinePlayers().forEach { player ->
+
             player.gameMode = GameMode.SURVIVAL
             player.allowFlight = false
             player.isFlying = false
+
             player.health = player.maxHealth
             player.foodLevel = 20
             player.fireTicks = 0
+
+            player.activePotionEffects.forEach {
+                player.removePotionEffect(it.type)
+            }
+
+            player.totalExperience = 0
+            player.level = 0
+            player.exp = 0f
+
+            player.inventory.clear()
+            player.inventory.helmet = null
+            player.inventory.chestplate = null
+            player.inventory.leggings = null
+            player.inventory.boots = null
+            player.inventory.setItemInOffHand(null)
+
+            player.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
         }
 
-        state = GameState.WAITING
+        Bukkit.broadcastMessage("§7ゲームがリセットされました")
     }
 }
