@@ -52,8 +52,7 @@ class MrCommand(
                     return true
                 }
 
-                sender.server.broadcastMessage("§cゲームを強制終了しました。")
-                gameManager.endGame(null)
+                gameManager.forceStopGame(sender)
             }
 
             "reload" -> {

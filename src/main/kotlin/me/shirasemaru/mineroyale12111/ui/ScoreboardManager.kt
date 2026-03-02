@@ -60,4 +60,10 @@ class ScoreboardManager {
             scoreboard.resetScores(it)
         }
     }
+
+    fun clearAll() {
+        Bukkit.getOnlinePlayers().forEach {
+            it.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
+        }
+    }
 }

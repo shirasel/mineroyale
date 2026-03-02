@@ -24,6 +24,8 @@ class GameManager(
     private var gameTask: BukkitTask? = null
     private var remainingGameSeconds: Int = 0
 
+    private val managedTasks = mutableListOf<BukkitTask>()
+
     /*
      * =========================
      * ゲーム開始
@@ -175,7 +177,7 @@ class GameManager(
 
         gameTask?.cancel()
 
-        gameTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+        val task = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
 
             if (state != GameState.RUNNING) return@Runnable
 
@@ -183,7 +185,6 @@ class GameManager(
                 remainingGameSeconds--
             }
 
-            // ⏰ 時間切れ判定
             if (remainingGameSeconds <= 0) {
                 handleTimeUp()
                 return@Runnable
@@ -200,6 +201,9 @@ class GameManager(
             )
 
         }, 20L, 20L)
+
+        gameTask = task
+        managedTasks.add(task)
     }
 
     /*
@@ -241,6 +245,63 @@ class GameManager(
             0 -> endGame(null)
             else -> endGame(alivePlayers) // 生存者全員勝利
         }
+    }
+
+    /*
+     * =========================
+     * 管理者強制終了
+     * =========================
+     */
+    fun forceStopGame(executor: Player) {
+
+        if (state != GameState.RUNNING) return
+
+        state = GameState.WAITING
+
+        cancelAllTasks()
+
+        borderManager.stop()
+        borderManager.reset()
+
+        remainingGameSeconds = 0
+
+        playerManager.clear()
+
+        scoreboardManager.clearAll()
+
+        val stopLocation = executor.location.clone().add(0.0, 0.5, 0.0)
+
+        Bukkit.getOnlinePlayers().forEach { player ->
+
+            player.gameMode = GameMode.SURVIVAL
+            player.allowFlight = false
+            player.isFlying = false
+
+            player.health = player.maxHealth
+            player.foodLevel = 20
+            player.fireTicks = 0
+
+            player.activePotionEffects.forEach {
+                player.removePotionEffect(it.type)
+            }
+
+            player.inventory.clear()
+
+            // 管理者の現在地へTP
+            if (player != executor) {
+                player.teleport(stopLocation)
+            }
+        }
+
+        Bukkit.broadcastMessage(
+            "§c管理者 §e${executor.name} §cによりゲームが強制終了されました。"
+        )
+    }
+
+    private fun cancelAllTasks() {
+        managedTasks.forEach { it.cancel() }
+        managedTasks.clear()
+        gameTask = null
     }
 
     /*
