@@ -6,6 +6,7 @@ import me.shirasemaru.mineroyale12111.game.GameManager
 import me.shirasemaru.mineroyale12111.listener.GameListener
 import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
 import me.shirasemaru.mineroyale12111.listener.PlayerJoinListener
+import me.shirasemaru.mineroyale12111.listener.SpectatorListener
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -54,6 +55,11 @@ class Mineroyale12111 : JavaPlugin() {
             this
         )
 
+        server.pluginManager.registerEvents(
+            SpectatorListener(gameManager),
+            this
+        )
+
         /* ==========================
            コマンド登録
          ========================== */
@@ -66,9 +72,9 @@ class Mineroyale12111 : JavaPlugin() {
 
     override fun onDisable() {
 
-        // 安全停止（ゲーム中なら終了処理）
         if (::gameManager.isInitialized) {
-            gameManager.endGame(null)
+            // ★ 安全停止（勝者表示なし）
+            gameManager.forceStopGameSilently()
         }
 
         logger.info("Mineroyale12111 が無効化されました。")

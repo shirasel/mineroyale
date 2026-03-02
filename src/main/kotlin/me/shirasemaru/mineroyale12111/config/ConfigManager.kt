@@ -17,6 +17,19 @@ class ConfigManager(private val plugin: JavaPlugin) {
     }
 
     // =========================
+    // Game
+    // =========================
+
+    val minPlayers: Int
+        get() = config.getInt("game.min-players", 2)
+
+    val maxPlayers: Int
+        get() = config.getInt("game.max-players", 20)
+
+    val countdownSeconds: Int
+        get() = config.getInt("game.countdown-seconds", 30)
+
+    // =========================
     // World
     // =========================
 

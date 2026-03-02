@@ -31,16 +31,21 @@ class ScoreboardManager {
         phaseState: String,
         remainingPhaseSeconds: Int
     ) {
-        clear()
+        clearScores()
 
-        objective.getScore("§7状態: §e$gameState").score = 9
+        val stateDisplay = when (gameState) {
+            GameState.WAITING -> "待機中"
+            GameState.RUNNING -> "ゲーム中"
+        }
+
+        objective.getScore("§7状態: §e$stateDisplay").score = 9
         objective.getScore("§7生存者: §e$aliveCount").score = 8
-        objective.getScore(" ").score = 7
+        objective.getScore("§f").score = 7
 
         objective.getScore("§7フェーズ: §e$currentPhase / $totalPhases").score = 6
-        objective.getScore("§7状態: §e$phaseState").score = 5
+        objective.getScore("§7縮小状態: §e$phaseState").score = 5
         objective.getScore("§7フェーズ残り: §e${formatTime(remainingPhaseSeconds)}").score = 4
-        objective.getScore("  ").score = 3
+        objective.getScore("§r").score = 3
 
         objective.getScore("§7全体残り: §e${formatTime(remainingGameSeconds)}").score = 2
 
@@ -55,13 +60,19 @@ class ScoreboardManager {
         return String.format("%02d:%02d", min, sec)
     }
 
-    private fun clear() {
+    /**
+     * スコア行だけクリア（内部用）
+     */
+    private fun clearScores() {
         scoreboard.entries.forEach {
             scoreboard.resetScores(it)
         }
     }
 
-    fun clearAll() {
+    /**
+     * 全プレイヤーのスコアボードをメインに戻す（外部用）
+     */
+    fun clear() {
         Bukkit.getOnlinePlayers().forEach {
             it.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
         }

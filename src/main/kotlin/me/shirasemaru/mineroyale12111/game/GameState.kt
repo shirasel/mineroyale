@@ -2,6 +2,5 @@ package me.shirasemaru.mineroyale12111.game
 
 enum class GameState {
     WAITING,
-    RUNNING,
-    ENDING
+    RUNNING
 }

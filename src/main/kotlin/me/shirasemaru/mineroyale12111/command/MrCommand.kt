@@ -1,7 +1,6 @@
 package me.shirasemaru.mineroyale12111.command
 
 import me.shirasemaru.mineroyale12111.game.GameManager
-import me.shirasemaru.mineroyale12111.game.GameState
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -37,7 +36,8 @@ class MrCommand(
         when (args[0].lowercase()) {
 
             "start" -> {
-                if (gameManager.state != GameState.WAITING) {
+
+                if (gameManager.isRunning()) {
                     sender.sendMessage("§cゲームは既に開始されています。")
                     return true
                 }
@@ -47,16 +47,19 @@ class MrCommand(
             }
 
             "stop" -> {
-                if (gameManager.state != GameState.RUNNING) {
+
+                if (!gameManager.isRunning()) {
                     sender.sendMessage("§c現在ゲームは実行中ではありません。")
                     return true
                 }
 
-                gameManager.forceStopGame(sender)
+                gameManager.forceStopGame()
+                sender.server.broadcastMessage("§c管理者によりゲームが強制終了されました。")
             }
 
             "reload" -> {
-                gameManager.configManager.reload()
+
+                gameManager.reloadConfig()
                 sender.sendMessage("§aconfigをリロードしました。")
             }
 
