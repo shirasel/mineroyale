@@ -5,6 +5,7 @@ import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitTask
@@ -22,24 +23,27 @@ class GameManager(
 ) {
 
     private var state = GameState.WAITING
+
     private val alivePlayers = mutableSetOf<Player>()
+    private val spectators = mutableSetOf<Player>()
 
     private val borderManager = BorderManager(plugin, configManager)
 
     private var scoreboardTask: BukkitTask? = null
-
-    private val spectators = mutableSetOf<Player>()
+    private var compassTask: BukkitTask? = null
 
     /* ======================================================== */
 
-    fun getState(): GameState = state
-    fun isRunning(): Boolean = state == GameState.RUNNING
+    fun getState() = state
+    fun isRunning() = state == GameState.RUNNING
+    fun isPvpEnabled() = borderManager.isPvpEnabled()
 
     /* ======================================================== */
     /* ゲーム開始 */
     /* ======================================================== */
 
     fun startGame() {
+
         if (state != GameState.WAITING) return
 
         val players = Bukkit.getOnlinePlayers().toList()
@@ -49,22 +53,55 @@ class GameManager(
             return
         }
 
+        startCountdown(players)
+    }
+
+    private fun startCountdown(players: List<Player>) {
+
+        var time = configManager.countdownSeconds
+
+        Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            if (time <= 0) {
+
+                Bukkit.broadcastMessage("§aゲーム開始！")
+                startMatch(players)
+                return@Runnable
+            }
+
+            if (time <= 5 || time % 10 == 0) {
+
+                Bukkit.broadcastMessage("§eゲーム開始まで §c${time}秒")
+
+                players.forEach {
+                    it.playSound(it.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1f)
+                }
+            }
+
+            time--
+
+        }, 0L, 20L)
+    }
+
+    private fun startMatch(players: List<Player>) {
+
         state = GameState.RUNNING
+
         alivePlayers.clear()
+        spectators.clear()
+
         alivePlayers.addAll(players)
+
+        borderManager.initialize()
 
         setupPlayers(players)
 
-        // ★ ボーダー初期化
-        borderManager.initialize()
-
-        // ★ フェーズ開始
         borderManager.runPhases {
-            // 全フェーズ終了時
             endGame(null)
         }
 
         startScoreboardTask()
+        startCompassTracking()
 
         plugin.logger.info("Mineroyale: ゲーム開始")
     }
@@ -74,46 +111,46 @@ class GameManager(
     /* ======================================================== */
 
     fun endGame(winner: Player?) {
+
         if (state != GameState.RUNNING) return
 
         state = GameState.WAITING
 
         stopScoreboardTask()
+        stopCompass()
+
         borderManager.stop()
         borderManager.reset()
 
         if (winner != null) {
 
-            // 全員勝者へテレポート
             teleportAllToWinner(winner)
-
-            // 勝利演出開始
             playVictoryEffect(winner)
 
         } else {
+
             Bukkit.broadcastMessage("§cゲーム終了")
             resetGame()
         }
-
-        plugin.logger.info("Mineroyale: ゲーム終了処理開始")
     }
 
-    // 勝者へのテレポート
+    /* ======================================================== */
+
     private fun teleportAllToWinner(winner: Player) {
 
         val location = winner.location.clone().add(0.0, 1.0, 0.0)
 
-        for (player in Bukkit.getOnlinePlayers()) {
-            player.teleport(location)
+        Bukkit.getOnlinePlayers().forEach {
+            it.teleport(location)
         }
     }
 
-    // 勝者演出
+    /* ======================================================== */
+
     private fun playVictoryEffect(winner: Player) {
 
         Bukkit.broadcastMessage("§6${winner.name} が勝利しました！")
 
-        // タイトル表示
         val title = Title.title(
             Component.text("VICTORY!"),
             Component.text("${winner.name} の勝利"),
@@ -124,28 +161,26 @@ class GameManager(
             )
         )
 
-        for (player in Bukkit.getOnlinePlayers()) {
-            player.showTitle(title)
+        Bukkit.getOnlinePlayers().forEach {
+            it.showTitle(title)
         }
 
-        // 花火発射（3回）
-        repeat(3) {
-            spawnFirework(winner)
-        }
+        repeat(3) { spawnFirework(winner) }
 
-        // 5秒後にリセット
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             resetGame()
-        }, 100L) // 100tick = 5秒
+        }, 100L)
     }
 
-    // 花火生成
+    /* ======================================================== */
+
     private fun spawnFirework(winner: Player) {
 
         val world = winner.world
         val firework = world.spawn(winner.location, org.bukkit.entity.Firework::class.java)
 
         val meta = firework.fireworkMeta
+
         meta.addEffect(
             org.bukkit.FireworkEffect.builder()
                 .withColor(org.bukkit.Color.ORANGE)
@@ -155,11 +190,13 @@ class GameManager(
                 .flicker(true)
                 .build()
         )
+
         meta.power = 1
         firework.fireworkMeta = meta
     }
 
-    // リセット処理
+    /* ======================================================== */
+
     private fun resetGame() {
 
         resetAllPlayers()
@@ -170,73 +207,58 @@ class GameManager(
     }
 
     /* ======================================================== */
-    /* 強制終了 */
-    /* ======================================================== */
-
-    fun forceStopGame() {
-        if (state != GameState.RUNNING) return
-        endGame(null)
-    }
-
-    fun forceStopGameSilently() {
-        if (state != GameState.RUNNING) return
-
-        state = GameState.WAITING
-
-        stopScoreboardTask()
-        borderManager.stop()
-        borderManager.reset()
-        resetAllPlayers()
-        scoreboardManager.clear()
-
-        alivePlayers.clear()
-
-        plugin.logger.info("Mineroyale: サイレント強制終了")
-    }
-
-    /* ======================================================== */
     /* プレイヤー死亡 */
     /* ======================================================== */
 
     fun handlePlayerDeath(player: Player) {
+
         if (state != GameState.RUNNING) return
 
         alivePlayers.remove(player)
         spectators.add(player)
 
         setSpectator(player)
-
         updateSpectatorHeads()
 
+        Bukkit.broadcastMessage("§7${player.name} が脱落しました §8(${alivePlayers.size}人残り)")
+
         if (alivePlayers.size <= 1) {
+
             val winner = alivePlayers.firstOrNull()
             endGame(winner)
         }
     }
 
-    // 観戦モード
+    /* ======================================================== */
+
     private fun setSpectator(player: Player) {
+
         player.gameMode = GameMode.SPECTATOR
         player.inventory.clear()
     }
 
-    // 生存者の頭を配布
+    /* ======================================================== */
+
     private fun updateSpectatorHeads() {
-        for (spectator in spectators) {
+
+        spectators.forEach { spectator ->
 
             spectator.inventory.clear()
 
             var slot = 0
 
-            for (alive in alivePlayers) {
+            alivePlayers.forEach { alive ->
+
                 val skull = createPlayerHead(alive)
                 spectator.inventory.setItem(slot++, skull)
             }
         }
     }
 
-    // プレイヤー頭アイテム生成
+    /* ======================================================== */
+
     private fun createPlayerHead(target: Player): ItemStack {
+
         val item = ItemStack(Material.PLAYER_HEAD)
         val meta = item.itemMeta as SkullMeta
 
@@ -248,10 +270,37 @@ class GameManager(
     }
 
     /* ======================================================== */
-    /* スコアボード更新 */
+    /* コンパス追跡 */
+    /* ======================================================== */
+
+    private fun startCompassTracking() {
+
+        compassTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            alivePlayers.forEach { player ->
+
+                val nearest = alivePlayers
+                    .filter { it != player }
+                    .minByOrNull { it.location.distance(player.location) }
+
+                nearest?.let {
+                    player.compassTarget = it.location
+                }
+            }
+
+        }, 0L, 40L)
+    }
+
+    private fun stopCompass() {
+        compassTask?.cancel()
+    }
+
+    /* ======================================================== */
+    /* スコアボード */
     /* ======================================================== */
 
     private fun startScoreboardTask() {
+
         scoreboardTask?.cancel()
 
         scoreboardTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
@@ -268,39 +317,52 @@ class GameManager(
                 remainingPhaseSeconds = borderManager.getRemainingPhaseSeconds()
             )
 
-        }, 0L, 20L)
+        }, 0L, 10L)
     }
 
     private fun stopScoreboardTask() {
+
         scoreboardTask?.cancel()
         scoreboardTask = null
     }
 
     /* ======================================================== */
-    /* プレイヤー初期化 */
-    /* ======================================================== */
 
     private fun setupPlayers(players: List<Player>) {
-        for (player in players) {
+
+        val spawnMap = borderManager.generateRandomSpawnLocations(players)
+
+        players.forEach { player ->
+
             player.gameMode = GameMode.SURVIVAL
             resetHealth(player)
+
             player.foodLevel = 20
             player.inventory.clear()
+
+            spawnMap[player]?.let {
+                player.teleport(it)
+            }
         }
     }
 
     private fun resetAllPlayers() {
-        for (player in Bukkit.getOnlinePlayers()) {
-            player.gameMode = GameMode.ADVENTURE
-            resetHealth(player)
-            player.foodLevel = 20
-            player.inventory.clear()
+
+        Bukkit.getOnlinePlayers().forEach {
+
+            it.gameMode = GameMode.ADVENTURE
+            resetHealth(it)
+
+            it.foodLevel = 20
+            it.inventory.clear()
         }
     }
 
     private fun resetHealth(player: Player) {
+
         val attribute = player.getAttribute(Attribute.MAX_HEALTH)
         val maxHealth = attribute?.value ?: 20.0
+
         player.health = maxHealth
     }
 

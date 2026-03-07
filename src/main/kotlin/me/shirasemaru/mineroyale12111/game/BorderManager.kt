@@ -2,12 +2,12 @@ package me.shirasemaru.mineroyale12111.game
 
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import org.bukkit.Bukkit
+import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
-import kotlin.math.pow
-import kotlin.math.sqrt
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -24,6 +24,7 @@ class BorderManager(
     private var moveTask: BukkitTask? = null
     private var damageTask: BukkitTask? = null
     private var phaseCountdownTask: BukkitTask? = null
+    private var graceTask: BukkitTask? = null
 
     private var currentCenterX = 0.0
     private var currentCenterZ = 0.0
@@ -32,11 +33,13 @@ class BorderManager(
     private var remainingPhaseSeconds = 0
     private var phaseState = "待機中"
 
+    private var pvpEnabled = false
+
     private val outsideTime = mutableMapOf<Player, Int>()
 
     /*
      * =========================
-     * 初期化（ランダム中心）
+     * 初期化
      * =========================
      */
     fun initialize() {
@@ -44,8 +47,7 @@ class BorderManager(
         stop()
 
         val startRadius = configManager.startSize / 2
-        val worldLimit = configManager.randomCenterRange  // ← configで指定する推奨
-
+        val worldLimit = configManager.randomCenterRange
         val max = worldLimit - startRadius
 
         currentCenterX = Random.nextDouble(-max, max)
@@ -55,11 +57,90 @@ class BorderManager(
         border.size = configManager.startSize
 
         startBorderDamage()
+        startInitialGracePeriod()
     }
 
     /*
      * =========================
-     * フェーズ実行
+     * PvPグレース
+     * =========================
+     */
+    private fun startInitialGracePeriod() {
+
+        pvpEnabled = false
+        Bukkit.broadcastMessage("§ePvPは30秒後に有効になります")
+
+        graceTask?.cancel()
+
+        graceTask = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+
+            pvpEnabled = true
+            Bukkit.broadcastMessage("§cPvPが有効になりました！")
+
+            world.players.forEach {
+                it.playSound(it.location, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1f)
+            }
+
+        }, 30 * 20L)
+    }
+
+    fun isPvpEnabled() = pvpEnabled
+
+    /*
+     * =========================
+     * 安全スポーン
+     * =========================
+     */
+    fun generateRandomSpawnLocations(players: List<Player>): Map<Player, Location> {
+
+        val result = mutableMapOf<Player, Location>()
+        val usedLocations = mutableListOf<Location>()
+
+        val radius = border.size / 2 - 20
+        val minDistance = configManager.minSpawnDistance
+
+        for (player in players) {
+
+            var location: Location
+            var attempts = 0
+
+            do {
+
+                val x = currentCenterX + Random.nextDouble(-radius, radius)
+                val z = currentCenterZ + Random.nextDouble(-radius, radius)
+
+                val y = world.getHighestBlockYAt(x.toInt(), z.toInt())
+                location = Location(world, x, (y + 1).toDouble(), z)
+
+                attempts++
+
+                if (!isSafeSpawn(location)) continue
+
+                if (usedLocations.none { it.distance(location) < minDistance }) break
+
+            } while (attempts < 300)
+
+            usedLocations.add(location)
+            result[player] = location
+        }
+
+        return result
+    }
+
+    private fun isSafeSpawn(loc: Location): Boolean {
+
+        val block = loc.clone().subtract(0.0, 1.0, 0.0).block
+
+        if (block.type == Material.WATER) return false
+        if (block.type == Material.LAVA) return false
+        if (block.type == Material.AIR) return false
+
+        return true
+    }
+
+    /*
+     * =========================
+     * フェーズ制御
      * =========================
      */
     fun runPhases(onComplete: () -> Unit) {
@@ -73,6 +154,11 @@ class BorderManager(
     ) {
 
         if (index >= phases.size) {
+
+            if (configManager.enableFinalMove) {
+                startFinalMove()
+            }
+
             onComplete()
             return
         }
@@ -97,12 +183,11 @@ class BorderManager(
         }
     }
 
-    private fun announcePhase(
-        index: Int,
-        phase: ConfigManager.BorderPhase
-    ) {
+    private fun announcePhase(index: Int, phase: ConfigManager.BorderPhase) {
 
-        Bukkit.broadcastMessage("§6========== フェーズ ${index + 1} ==========")
+        val phaseNumber = index + 1
+
+        Bukkit.broadcastMessage("§6========== フェーズ $phaseNumber ==========")
 
         if (phase.wait > 0) {
             Bukkit.broadcastMessage("§e${phase.wait}秒間の待機時間")
@@ -111,8 +196,26 @@ class BorderManager(
         Bukkit.broadcastMessage("§cボーダーが §f${phase.size} §cまで縮小")
         Bukkit.broadcastMessage("§7収縮時間: §f${phase.duration}秒")
 
+        val title = net.kyori.adventure.title.Title.title(
+            net.kyori.adventure.text.Component.text("フェーズ $phaseNumber"),
+            net.kyori.adventure.text.Component.text("ボーダー縮小開始"),
+            net.kyori.adventure.title.Title.Times.times(
+                java.time.Duration.ofMillis(300),
+                java.time.Duration.ofSeconds(3),
+                java.time.Duration.ofMillis(700)
+            )
+        )
+
         world.players.forEach {
-            it.playSound(it.location, Sound.BLOCK_BELL_USE, 1.0f, 1.0f)
+
+            it.showTitle(title)
+
+            it.playSound(
+                it.location,
+                Sound.BLOCK_BELL_USE,
+                1f,
+                1f
+            )
         }
     }
 
@@ -123,20 +226,11 @@ class BorderManager(
     ) {
 
         val phase = phases[index]
-        val startSize = border.size
-        val endSize = phase.size
 
         phaseState = "縮小中"
         startPhaseCountdown(phase.duration)
 
-        if (index == phases.lastIndex && configManager.enableFinalMove) {
-            smoothMoveCenter(
-                configManager.finalMoveRange,
-                configManager.finalMoveDuration.toLong()
-            )
-        }
-
-        startShrink(startSize, endSize, phase.duration.toLong()) {
+        startShrink(border.size, phase.size, phase.duration.toLong()) {
             runPhase(phases, index + 1, onComplete)
         }
     }
@@ -151,12 +245,6 @@ class BorderManager(
         shrinkTask?.cancel()
 
         val ticks = seconds * 20
-        if (ticks <= 0) {
-            border.size = end
-            onFinish()
-            return
-        }
-
         val diff = start - end
         val perTick = diff / ticks
 
@@ -179,10 +267,34 @@ class BorderManager(
         }, 0L, 1L)
     }
 
+    /*
+     * =========================
+     * 最終円移動
+     * =========================
+     */
+    private fun startFinalMove() {
+
+        val range = configManager.finalMoveRange
+        val duration = configManager.finalMoveDuration
+
+        if (range <= 0 || duration <= 0) return
+
+        val targetX = currentCenterX + Random.nextDouble(-range, range)
+        val targetZ = currentCenterZ + Random.nextDouble(-range, range)
+
+        border.setCenter(targetX, targetZ)
+
+        Bukkit.broadcastMessage("§c最終円が移動しています！")
+    }
+
+    /*
+     * =========================
+     * カウントダウン
+     * =========================
+     */
     private fun startPhaseCountdown(seconds: Int) {
 
         phaseCountdownTask?.cancel()
-
         remainingPhaseSeconds = seconds
 
         phaseCountdownTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
@@ -199,46 +311,7 @@ class BorderManager(
 
     /*
      * =========================
-     * 最終フェーズ中心移動
-     * =========================
-     */
-    private fun smoothMoveCenter(range: Double, seconds: Long) {
-
-        moveTask?.cancel()
-
-        val targetX = currentCenterX + Random.nextDouble(-range, range)
-        val targetZ = currentCenterZ + Random.nextDouble(-range, range)
-
-        val ticks = seconds * 20
-        if (ticks <= 0) return
-
-        val stepX = (targetX - currentCenterX) / ticks
-        val stepZ = (targetZ - currentCenterZ) / ticks
-
-        var count = 0L
-
-        moveTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
-
-            if (count >= ticks) {
-                border.setCenter(targetX, targetZ)
-                currentCenterX = targetX
-                currentCenterZ = targetZ
-                moveTask?.cancel()
-                return@Runnable
-            }
-
-            currentCenterX += stepX
-            currentCenterZ += stepZ
-            border.setCenter(currentCenterX, currentCenterZ)
-
-            count++
-
-        }, 0L, 1L)
-    }
-
-    /*
-     * =========================
-     * ボーダー外ダメージ
+     * ボーダーダメージ
      * =========================
      */
     private fun startBorderDamage() {
@@ -275,21 +348,21 @@ class BorderManager(
         val dx = player.location.x - currentCenterX
         val dz = player.location.z - currentCenterZ
 
-        val distance = sqrt(dx.pow(2) + dz.pow(2))
-        return distance > border.size / 2
+        val distanceSquared = dx * dx + dz * dz
+        val radius = border.size / 2
+
+        return distanceSquared > radius * radius
     }
 
-    /*
-     * =========================
-     * 停止・リセット
-     * =========================
-     */
     fun stop() {
+
         shrinkTask?.cancel()
         waitTask?.cancel()
         moveTask?.cancel()
         damageTask?.cancel()
         phaseCountdownTask?.cancel()
+        graceTask?.cancel()
+
         outsideTime.clear()
     }
 
@@ -297,26 +370,12 @@ class BorderManager(
 
         stop()
 
-        val world = configManager.gameWorld
-        val border = world.worldBorder
-
-        // バニラ初期値にリセット
         border.setCenter(0.0, 0.0)
-        border.size = 29_999_984.0
-
-        // ダメージ系も念のため初期化
-        border.damageAmount = 0.2
-        border.damageBuffer = 5.0
-
-        // 警告初期値
-        border.warningDistance = 5
+        border.size = 29999984.0
     }
 
     fun getCurrentPhaseIndex() = currentPhaseIndex + 1
     fun getTotalPhases() = configManager.borderPhases.size
     fun getRemainingPhaseSeconds() = remainingPhaseSeconds
     fun getPhaseState() = phaseState
-
-    fun getCurrentCenterX() = currentCenterX
-    fun getCurrentCenterZ() = currentCenterZ
 }

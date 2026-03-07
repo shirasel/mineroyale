@@ -17,6 +17,10 @@ world:
   # 初期ボーダーサイズ
   initial-border-size: 1000
 
+spawn:
+  # プレイヤー同士の最低距離
+  min-distance: 50
+
 border:
   damage-per-second: 1.0
   warning-distance: 10

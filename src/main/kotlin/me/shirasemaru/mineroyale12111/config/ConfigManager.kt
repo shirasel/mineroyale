@@ -55,6 +55,13 @@ class ConfigManager(private val plugin: JavaPlugin) {
         get() = initialBorderSize
 
     // =========================
+    // Spawn
+    // =========================
+
+    val minSpawnDistance: Double
+        get() = config.getDouble("spawn.min-distance", 50.0)
+
+    // =========================
     // Border Basic
     // =========================
 

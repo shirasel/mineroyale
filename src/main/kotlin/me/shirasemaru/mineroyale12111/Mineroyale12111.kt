@@ -74,7 +74,7 @@ class Mineroyale12111 : JavaPlugin() {
 
         if (::gameManager.isInitialized) {
             // ★ 安全停止（勝者表示なし）
-            gameManager.forceStopGameSilently()
+            gameManager.endGame(null)
         }
 
         logger.info("Mineroyale12111 が無効化されました。")

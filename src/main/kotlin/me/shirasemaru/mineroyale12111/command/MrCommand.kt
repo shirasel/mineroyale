@@ -53,7 +53,7 @@ class MrCommand(
                     return true
                 }
 
-                gameManager.forceStopGame()
+                gameManager.endGame(null)
                 sender.server.broadcastMessage("§c管理者によりゲームが強制終了されました。")
             }
 
