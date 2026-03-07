@@ -16,8 +16,12 @@ class HealthRegainListener(
     @EventHandler
     fun onHealthRegain(event: EntityRegainHealthEvent) {
 
-        if (event.entity !is Player) return
+        val player = event.entity as? Player ?: return
         if (!gameManager.isRunning()) return
+
+        // 満腹度を常にMAX
+        player.foodLevel = 20
+        player.saturation = 20f
 
         // 自然回復（満腹回復）のみ調整
         if (event.regainReason == EntityRegainHealthEvent.RegainReason.SATIATED) {
