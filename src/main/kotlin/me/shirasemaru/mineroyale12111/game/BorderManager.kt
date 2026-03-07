@@ -2,14 +2,11 @@ package me.shirasemaru.mineroyale12111.game
 
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import net.kyori.adventure.text.Component
-import org.bukkit.Bukkit
-import org.bukkit.Location
-import org.bukkit.Material
-import org.bukkit.Sound
+import org.bukkit.*
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
-import kotlin.math.min
+import kotlin.math.abs
 import kotlin.random.Random
 
 class BorderManager(
@@ -27,15 +24,11 @@ class BorderManager(
     private var phaseCountdownTask: BukkitTask? = null
     private var graceTask: BukkitTask? = null
 
-    private var currentCenterX = 0.0
-    private var currentCenterZ = 0.0
-
     private var currentPhaseIndex = 0
     private var remainingPhaseSeconds = 0
     private var phaseState = "待機中"
 
     private var pvpEnabled = false
-
     private val outsideTime = mutableMapOf<Player, Int>()
 
     private var gameEndTime: Long = 0
@@ -53,10 +46,10 @@ class BorderManager(
         val worldLimit = configManager.randomCenterRange
         val max = worldLimit - startRadius
 
-        currentCenterX = Random.nextDouble(-max, max)
-        currentCenterZ = Random.nextDouble(-max, max)
+        val centerX = Random.nextDouble(-max, max)
+        val centerZ = Random.nextDouble(-max, max)
 
-        border.setCenter(currentCenterX, currentCenterZ)
+        border.setCenter(centerX, centerZ)
         border.size = configManager.startSize
 
         calculateGameEndTime()
@@ -119,7 +112,9 @@ class BorderManager(
         val result = mutableMapOf<Player, Location>()
         val usedLocations = mutableListOf<Location>()
 
-        val radius = border.size / 2 - 20
+        val center = border.center
+        val radius = border.size / 2 - 1
+
         val minDistance = configManager.minSpawnDistance
         val minDistanceSq = minDistance * minDistance
 
@@ -130,8 +125,8 @@ class BorderManager(
 
             while (attempts < 50) {
 
-                val x = currentCenterX + Random.nextDouble(-radius, radius)
-                val z = currentCenterZ + Random.nextDouble(-radius, radius)
+                val x = center.x + Random.nextDouble(-radius, radius)
+                val z = center.z + Random.nextDouble(-radius, radius)
 
                 val y = world.getHighestBlockYAt(x.toInt(), z.toInt())
                 val candidate = Location(world, x, (y + 1).toDouble(), z)
@@ -147,8 +142,8 @@ class BorderManager(
 
             if (location == null) {
 
-                val y = world.getHighestBlockYAt(currentCenterX.toInt(), currentCenterZ.toInt())
-                location = Location(world, currentCenterX, (y + 2).toDouble(), currentCenterZ)
+                val y = world.getHighestBlockYAt(center.x.toInt(), center.z.toInt())
+                location = Location(world, center.x, (y + 2).toDouble(), center.z)
             }
 
             usedLocations.add(location)
@@ -163,6 +158,8 @@ class BorderManager(
         val ground = loc.clone().subtract(0.0, 1.0, 0.0).block.type
 
         if (ground == Material.LAVA) return false
+        if (ground == Material.WATER) return false
+        if (ground == Material.CACTUS) return false
         if (ground == Material.FIRE) return false
         if (ground == Material.CAMPFIRE) return false
 
@@ -226,28 +223,6 @@ class BorderManager(
 
         Bukkit.broadcast(Component.text("§cボーダーが §f${phase.size} §cまで縮小"))
         Bukkit.broadcast(Component.text("§7収縮時間: §f${phase.duration}秒"))
-
-        val title = net.kyori.adventure.title.Title.title(
-            Component.text("フェーズ $phaseNumber"),
-            Component.text("ボーダー縮小開始"),
-            net.kyori.adventure.title.Title.Times.times(
-                java.time.Duration.ofMillis(300),
-                java.time.Duration.ofSeconds(3),
-                java.time.Duration.ofMillis(700)
-            )
-        )
-
-        world.players.forEach {
-
-            it.showTitle(title)
-
-            it.playSound(
-                it.location,
-                Sound.BLOCK_BELL_USE,
-                1f,
-                1f
-            )
-        }
     }
 
     private fun startShrinkPhase(
@@ -300,7 +275,7 @@ class BorderManager(
 
     /*
      * =========================
-     * 最終円移動
+     * 最終円移動（滑らか）
      * =========================
      */
     private fun startFinalMove() {
@@ -310,10 +285,32 @@ class BorderManager(
 
         if (range <= 0 || duration <= 0) return
 
-        val targetX = currentCenterX + Random.nextDouble(-range, range)
-        val targetZ = currentCenterZ + Random.nextDouble(-range, range)
+        val start = border.center
 
-        border.setCenter(targetX, targetZ)
+        val targetX = start.x + Random.nextDouble(-range, range)
+        val targetZ = start.z + Random.nextDouble(-range, range)
+
+        val ticks = duration * 20
+        val moveX = (targetX - start.x) / ticks
+        val moveZ = (targetZ - start.z) / ticks
+
+        var count = 0
+
+        moveTask?.cancel()
+
+        moveTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            if (count >= ticks) {
+                moveTask?.cancel()
+                return@Runnable
+            }
+
+            val center = border.center
+            border.setCenter(center.x + moveX, center.z + moveZ)
+
+            count++
+
+        }, 0L, 1L)
 
         Bukkit.broadcast(Component.text("§c最終円が移動しています！"))
     }
@@ -351,15 +348,15 @@ class BorderManager(
 
         damageTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
 
-            val radius = border.size / 2
-            val radiusSq = radius * radius
+            val center = border.center
+            val radius = border.size / 2 - 1
 
             world.players.forEach { player ->
 
-                val dx = player.location.x - currentCenterX
-                val dz = player.location.z - currentCenterZ
+                val dx = abs(player.location.x - center.x)
+                val dz = abs(player.location.z - center.z)
 
-                val outside = (dx * dx + dz * dz) > radiusSq
+                val outside = dx > radius || dz > radius
 
                 if (!outside) {
                     outsideTime.remove(player)
@@ -369,17 +366,16 @@ class BorderManager(
                 val time = outsideTime.getOrDefault(player, 0) + 2
                 outsideTime[player] = time
 
-                val damage = min(
+                val damage = kotlin.math.min(
                     configManager.enhancedBaseDamage +
                             configManager.enhancedIncreasePerSecond * time,
                     configManager.enhancedMaxDamage
                 )
 
                 player.damage(damage)
-
             }
 
-        }, 40L, 40L) // 2秒ごと
+        }, 40L, 40L)
     }
 
     fun stop() {
