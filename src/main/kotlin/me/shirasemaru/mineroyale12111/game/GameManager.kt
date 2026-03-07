@@ -322,14 +322,14 @@ class GameManager(
             scoreboardManager.updateAll(
                 gameState = state,
                 aliveCount = alivePlayers.size,
-                remainingGameSeconds = 0,
+                remainingGameSeconds = borderManager.getRemainingGameSeconds(),
                 currentPhase = borderManager.getCurrentPhaseIndex(),
                 totalPhases = borderManager.getTotalPhases(),
                 phaseState = borderManager.getPhaseState(),
                 remainingPhaseSeconds = borderManager.getRemainingPhaseSeconds()
             )
 
-        }, 0L, 10L)
+        }, 0L, 20L)
     }
 
     private fun stopScoreboardTask() {

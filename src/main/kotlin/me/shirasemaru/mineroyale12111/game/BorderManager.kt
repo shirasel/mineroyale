@@ -38,6 +38,8 @@ class BorderManager(
 
     private val outsideTime = mutableMapOf<Player, Int>()
 
+    private var gameEndTime: Long = 0
+
     /*
      * =========================
      * 初期化
@@ -57,8 +59,28 @@ class BorderManager(
         border.setCenter(currentCenterX, currentCenterZ)
         border.size = configManager.startSize
 
+        calculateGameEndTime()
+
         startBorderDamage()
         startInitialGracePeriod()
+    }
+
+    private fun calculateGameEndTime() {
+
+        var totalSeconds = 0
+
+        configManager.borderPhases.forEach {
+            totalSeconds += it.wait
+            totalSeconds += it.duration
+        }
+
+        gameEndTime = System.currentTimeMillis() + (totalSeconds * 1000)
+    }
+
+    fun getRemainingGameSeconds(): Int {
+
+        val remaining = (gameEndTime - System.currentTimeMillis()) / 1000
+        return remaining.coerceAtLeast(0).toInt()
     }
 
     /*
