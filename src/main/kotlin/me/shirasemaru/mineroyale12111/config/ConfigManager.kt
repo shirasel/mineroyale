@@ -21,7 +21,7 @@ class ConfigManager(private val plugin: JavaPlugin) {
     // =========================
 
     val minPlayers: Int
-        get() = config.getInt("game.min-players", 2)
+        get() = config.getInt("game.min-players", 1)
 
     val maxPlayers: Int
         get() = config.getInt("game.max-players", 20)

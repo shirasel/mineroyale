@@ -21,6 +21,9 @@ class GameManager(
     private val configManager: ConfigManager,
     private val scoreboardManager: ScoreboardManager
 ) {
+    /* ======================================================== */
+    /* 状態 */
+    /* ======================================================== */
 
     private var state = GameState.WAITING
 
@@ -29,6 +32,11 @@ class GameManager(
 
     private val borderManager = BorderManager(plugin, configManager)
 
+    /* ======================================================== */
+    /* タスク管理 */
+    /* ======================================================== */
+
+    private var countdownTask: BukkitTask? = null
     private var scoreboardTask: BukkitTask? = null
     private var compassTask: BukkitTask? = null
 
@@ -37,7 +45,6 @@ class GameManager(
     fun getState() = state
     fun isRunning() = state == GameState.RUNNING
     fun isPvpEnabled() = borderManager.isPvpEnabled()
-
     /* ======================================================== */
     /* ゲーム開始 */
     /* ======================================================== */
@@ -48,10 +55,10 @@ class GameManager(
 
         val players = Bukkit.getOnlinePlayers().toList()
 
-        if (players.size < configManager.minPlayers) {
-            plugin.logger.info("参加人数不足")
-            return
-        }
+        //if (players.size < configManager.minPlayers) {
+            //plugin.logger.info("参加人数不足")
+            //return
+        //}
 
         startCountdown(players)
     }
@@ -60,18 +67,21 @@ class GameManager(
 
         var time = configManager.countdownSeconds
 
-        Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+        countdownTask?.cancel()
+
+        countdownTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
 
             if (time <= 0) {
 
-                Bukkit.broadcastMessage("§aゲーム開始！")
+                Bukkit.broadcast(Component.text("§aゲーム開始！"))
+                countdownTask?.cancel()   // これが必要
                 startMatch(players)
                 return@Runnable
             }
 
             if (time <= 5 || time % 10 == 0) {
 
-                Bukkit.broadcastMessage("§eゲーム開始まで §c${time}秒")
+                Bukkit.broadcast(Component.text("§eゲーム開始まで §c${time}秒"))
 
                 players.forEach {
                     it.playSound(it.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1f)
@@ -89,19 +99,21 @@ class GameManager(
 
         alivePlayers.clear()
         spectators.clear()
-
         alivePlayers.addAll(players)
 
         borderManager.initialize()
 
-        setupPlayers(players)
+        Bukkit.getScheduler().runTask(plugin, Runnable {
 
-        borderManager.runPhases {
-            endGame(null)
-        }
+            setupPlayers(players)
 
-        startScoreboardTask()
-        startCompassTracking()
+            borderManager.runPhases {
+                endGame(null)
+            }
+
+            startScoreboardTask()
+            startCompassTracking()
+        })
 
         plugin.logger.info("Mineroyale: ゲーム開始")
     }
@@ -129,7 +141,7 @@ class GameManager(
 
         } else {
 
-            Bukkit.broadcastMessage("§cゲーム終了")
+            Bukkit.broadcast(Component.text("§cゲーム終了"))
             resetGame()
         }
     }
@@ -149,7 +161,7 @@ class GameManager(
 
     private fun playVictoryEffect(winner: Player) {
 
-        Bukkit.broadcastMessage("§6${winner.name} が勝利しました！")
+        Bukkit.broadcast(Component.text("§6${winner.name} が勝利しました！"))
 
         val title = Title.title(
             Component.text("VICTORY!"),
@@ -220,7 +232,7 @@ class GameManager(
         setSpectator(player)
         updateSpectatorHeads()
 
-        Bukkit.broadcastMessage("§7${player.name} が脱落しました §8(${alivePlayers.size}人残り)")
+        Bukkit.broadcast(Component.text("§7${player.name} が脱落しました §8(${alivePlayers.size}人残り)"))
 
         if (alivePlayers.size <= 1) {
 
@@ -263,7 +275,7 @@ class GameManager(
         val meta = item.itemMeta as SkullMeta
 
         meta.owningPlayer = target
-        meta.setDisplayName("§e${target.name} を観戦")
+        meta.displayName(Component.text("§e${target.name} を観戦"))
 
         item.itemMeta = meta
         return item
@@ -332,18 +344,21 @@ class GameManager(
 
         val spawnMap = borderManager.generateRandomSpawnLocations(players)
 
-        players.forEach { player ->
+        Bukkit.getScheduler().runTask(plugin, Runnable {
 
-            player.gameMode = GameMode.SURVIVAL
-            resetHealth(player)
+            players.forEach { player ->
 
-            player.foodLevel = 20
-            player.inventory.clear()
+                player.gameMode = GameMode.SURVIVAL
+                resetHealth(player)
 
-            spawnMap[player]?.let {
-                player.teleport(it)
+                player.foodLevel = 20
+                player.inventory.clear()
+
+                spawnMap[player]?.let {
+                    player.teleport(it)
+                }
             }
-        }
+        })
     }
 
     private fun resetAllPlayers() {

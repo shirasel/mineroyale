@@ -1,6 +1,8 @@
 package me.shirasemaru.mineroyale12111.command
 
 import me.shirasemaru.mineroyale12111.game.GameManager
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -42,7 +44,7 @@ class MrCommand(
                     return true
                 }
 
-                sender.server.broadcastMessage("§aゲームを開始します！")
+                sender.server.broadcast(Component.text("ゲームを開始します！", NamedTextColor.GREEN))
                 gameManager.startGame()
             }
 
@@ -54,13 +56,13 @@ class MrCommand(
                 }
 
                 gameManager.endGame(null)
-                sender.server.broadcastMessage("§c管理者によりゲームが強制終了されました。")
+                sender.server.broadcast(Component.text("管理者によりゲームが強制終了されました。", NamedTextColor.GREEN))
             }
 
             "reload" -> {
 
                 gameManager.reloadConfig()
-                sender.sendMessage("§aconfigをリロードしました。")
+                sender.sendMessage("configをリロードしました。")
             }
 
             else -> sender.sendMessage("§c不明なサブコマンドです。")
