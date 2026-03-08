@@ -3,17 +3,15 @@ package me.shirasemaru.mineroyale12111.game
 import me.shirasemaru.mineroyale12111.Mineroyale12111
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
-import org.bukkit.Bukkit
-import org.bukkit.GameMode
-import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
-import org.bukkit.entity.Player
-import org.bukkit.scheduler.BukkitTask
-import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.SkullMeta
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.title.Title
+import org.bukkit.*
+import org.bukkit.attribute.Attribute
+import org.bukkit.entity.Firework
+import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.SkullMeta
+import org.bukkit.scheduler.BukkitTask
 import java.time.Duration
 
 class GameManager(
@@ -21,9 +19,6 @@ class GameManager(
     private val configManager: ConfigManager,
     private val scoreboardManager: ScoreboardManager
 ) {
-    /* ======================================================== */
-    /* 状態 */
-    /* ======================================================== */
 
     private var state = GameState.WAITING
 
@@ -32,34 +27,25 @@ class GameManager(
 
     private val borderManager = BorderManager(plugin, configManager)
 
-    /* ======================================================== */
-    /* タスク管理 */
-    /* ======================================================== */
-
     private var countdownTask: BukkitTask? = null
     private var scoreboardTask: BukkitTask? = null
     private var compassTask: BukkitTask? = null
 
-    /* ======================================================== */
-
     fun getState() = state
     fun isRunning() = state == GameState.RUNNING
     fun isPvpEnabled() = borderManager.isPvpEnabled()
-    /* ======================================================== */
-    /* ゲーム開始 */
-    /* ======================================================== */
+
+    /*
+     * ========================================================
+     * ゲーム開始
+     * ========================================================
+     */
 
     fun startGame() {
 
         if (state != GameState.WAITING) return
 
         val players = Bukkit.getOnlinePlayers().toList()
-
-        //if (players.size < configManager.minPlayers) {
-            //plugin.logger.info("参加人数不足")
-            //return
-        //}
-
         startCountdown(players)
     }
 
@@ -74,7 +60,7 @@ class GameManager(
             if (time <= 0) {
 
                 Bukkit.broadcast(Component.text("§aゲーム開始！"))
-                countdownTask?.cancel()   // これが必要
+                countdownTask?.cancel()
                 startMatch(players)
                 return@Runnable
             }
@@ -99,28 +85,28 @@ class GameManager(
 
         alivePlayers.clear()
         spectators.clear()
+
         alivePlayers.addAll(players)
 
         borderManager.initialize()
 
-        Bukkit.getScheduler().runTask(plugin, Runnable {
+        setupPlayers(players)
 
-            setupPlayers(players)
+        borderManager.runPhases {
+            endGame(null)
+        }
 
-            borderManager.runPhases {
-                endGame(null)
-            }
-
-            startScoreboardTask()
-            startCompassTracking()
-        })
+        startScoreboardTask()
+        startCompassTracking()
 
         plugin.logger.info("Mineroyale: ゲーム開始")
     }
 
-    /* ======================================================== */
-    /* ゲーム終了 */
-    /* ======================================================== */
+    /*
+     * ========================================================
+     * ゲーム終了
+     * ========================================================
+     */
 
     fun endGame(winner: Player?) {
 
@@ -134,7 +120,7 @@ class GameManager(
         borderManager.stop()
         borderManager.reset()
 
-        if (winner != null) {
+        if (winner != null && winner.isOnline) {
 
             teleportAllToWinner(winner)
             playVictoryEffect(winner)
@@ -146,9 +132,13 @@ class GameManager(
         }
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     private fun teleportAllToWinner(winner: Player) {
+
+        if (!winner.isOnline) return
 
         val location = winner.location.clone().add(0.0, 1.0, 0.0)
 
@@ -157,9 +147,13 @@ class GameManager(
         }
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     private fun playVictoryEffect(winner: Player) {
+
+        if (!winner.isOnline) return
 
         Bukkit.broadcast(Component.text("§6${winner.name} が勝利しました！"))
 
@@ -184,20 +178,19 @@ class GameManager(
         }, 100L)
     }
 
-    /* ======================================================== */
-
     private fun spawnFirework(winner: Player) {
 
-        val world = winner.world
-        val firework = world.spawn(winner.location, org.bukkit.entity.Firework::class.java)
+        if (!winner.isOnline) return
+
+        val firework = winner.world.spawn(winner.location, Firework::class.java)
 
         val meta = firework.fireworkMeta
 
         meta.addEffect(
-            org.bukkit.FireworkEffect.builder()
-                .withColor(org.bukkit.Color.ORANGE)
-                .withFade(org.bukkit.Color.YELLOW)
-                .with(org.bukkit.FireworkEffect.Type.BALL_LARGE)
+            FireworkEffect.builder()
+                .withColor(Color.ORANGE)
+                .withFade(Color.YELLOW)
+                .with(FireworkEffect.Type.BALL_LARGE)
                 .trail(true)
                 .flicker(true)
                 .build()
@@ -207,24 +200,30 @@ class GameManager(
         firework.fireworkMeta = meta
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     private fun resetGame() {
 
         resetAllPlayers()
+
         scoreboardManager.clear()
 
         alivePlayers.clear()
         spectators.clear()
     }
 
-    /* ======================================================== */
-    /* プレイヤー死亡 */
-    /* ======================================================== */
+    /*
+     * ========================================================
+     * プレイヤー死亡
+     * ========================================================
+     */
 
     fun handlePlayerDeath(player: Player) {
 
         if (state != GameState.RUNNING) return
+        if (!alivePlayers.contains(player)) return
 
         alivePlayers.remove(player)
         spectators.add(player)
@@ -232,16 +231,25 @@ class GameManager(
         setSpectator(player)
         updateSpectatorHeads()
 
-        Bukkit.broadcast(Component.text("§7${player.name} が脱落しました §8(${alivePlayers.size}人残り)"))
+        Bukkit.broadcast(
+            Component.text("§7${player.name} が脱落しました §8(${alivePlayers.size}人残り)")
+        )
 
         if (alivePlayers.size <= 1) {
 
             val winner = alivePlayers.firstOrNull()
-            endGame(winner)
+
+            if (winner == null && spectators.contains(player)) {
+                endGame(player)
+            } else {
+                endGame(winner)
+            }
         }
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     private fun setSpectator(player: Player) {
 
@@ -249,11 +257,13 @@ class GameManager(
         player.inventory.clear()
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     private fun updateSpectatorHeads() {
 
-        spectators.forEach { spectator ->
+        spectators.filter { it.isOnline }.forEach { spectator ->
 
             spectator.inventory.clear()
 
@@ -267,8 +277,6 @@ class GameManager(
         }
     }
 
-    /* ======================================================== */
-
     private fun createPlayerHead(target: Player): ItemStack {
 
         val item = ItemStack(Material.PLAYER_HEAD)
@@ -281,13 +289,19 @@ class GameManager(
         return item
     }
 
-    /* ======================================================== */
-    /* コンパス追跡 */
-    /* ======================================================== */
+    /*
+     * ========================================================
+     * コンパス追跡
+     * ========================================================
+     */
 
     private fun startCompassTracking() {
 
+        compassTask?.cancel()
+
         compassTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+
+            if (alivePlayers.size <= 1) return@Runnable
 
             alivePlayers.forEach { player ->
 
@@ -304,12 +318,16 @@ class GameManager(
     }
 
     private fun stopCompass() {
+
         compassTask?.cancel()
+        compassTask = null
     }
 
-    /* ======================================================== */
-    /* スコアボード */
-    /* ======================================================== */
+    /*
+     * ========================================================
+     * スコアボード
+     * ========================================================
+     */
 
     private fun startScoreboardTask() {
 
@@ -338,27 +356,26 @@ class GameManager(
         scoreboardTask = null
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     private fun setupPlayers(players: List<Player>) {
 
         val spawnMap = borderManager.generateRandomSpawnLocations(players)
 
-        Bukkit.getScheduler().runTask(plugin, Runnable {
+        players.forEach { player ->
 
-            players.forEach { player ->
+            player.gameMode = GameMode.SURVIVAL
+            resetHealth(player)
 
-                player.gameMode = GameMode.SURVIVAL
-                resetHealth(player)
+            player.foodLevel = 20
+            player.inventory.clear()
 
-                player.foodLevel = 20
-                player.inventory.clear()
-
-                spawnMap[player]?.let {
-                    player.teleport(it)
-                }
+            spawnMap[player]?.let {
+                player.teleport(it)
             }
-        })
+        }
     }
 
     private fun resetAllPlayers() {
@@ -381,7 +398,9 @@ class GameManager(
         player.health = maxHealth
     }
 
-    /* ======================================================== */
+    /*
+     * ========================================================
+     */
 
     fun reloadConfig() {
         configManager.reload()
