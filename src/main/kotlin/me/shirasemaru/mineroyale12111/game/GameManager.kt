@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
 import org.bukkit.scheduler.BukkitTask
 import java.time.Duration
+import java.util.UUID
 
 class GameManager(
     private val plugin: Mineroyale12111,
@@ -22,8 +23,8 @@ class GameManager(
 
     private var state = GameState.WAITING
 
-    private val alivePlayers = mutableSetOf<Player>()
-    private val spectators = mutableSetOf<Player>()
+    private val alivePlayers = mutableSetOf<UUID>()
+    private val spectators = mutableSetOf<UUID>()
 
     private val borderManager = BorderManager(plugin, configManager)
 
@@ -86,7 +87,9 @@ class GameManager(
         alivePlayers.clear()
         spectators.clear()
 
-        alivePlayers.addAll(players)
+        players.forEach {
+            alivePlayers.add(it.uniqueId)
+        }
 
         borderManager.initialize()
 
@@ -223,10 +226,10 @@ class GameManager(
     fun handlePlayerDeath(player: Player) {
 
         if (state != GameState.RUNNING) return
-        if (!alivePlayers.contains(player)) return
+        if (!alivePlayers.contains(player.uniqueId)) return
 
-        alivePlayers.remove(player)
-        spectators.add(player)
+        alivePlayers.remove(player.uniqueId)
+        spectators.add(player.uniqueId)
 
         setSpectator(player)
         updateSpectatorHeads()
@@ -237,9 +240,10 @@ class GameManager(
 
         if (alivePlayers.size <= 1) {
 
-            val winner = alivePlayers.firstOrNull()
+            val winnerUUID = alivePlayers.firstOrNull()
+            val winner = winnerUUID?.let { Bukkit.getPlayer(it) }
 
-            if (winner == null && spectators.contains(player)) {
+            if (winner == null && spectators.contains(player.uniqueId)) {
                 endGame(player)
             } else {
                 endGame(winner)
@@ -263,13 +267,16 @@ class GameManager(
 
     private fun updateSpectatorHeads() {
 
-        spectators.filter { it.isOnline }.forEach { spectator ->
+        spectators.forEach { spectatorUUID ->
 
+            val spectator = getPlayer(spectatorUUID) ?: return@forEach
             spectator.inventory.clear()
 
             var slot = 0
 
-            alivePlayers.forEach { alive ->
+            alivePlayers.forEach { aliveUUID ->
+
+                val alive = getPlayer(aliveUUID) ?: return@forEach
 
                 val skull = createPlayerHead(alive)
                 spectator.inventory.setItem(slot++, skull)
@@ -303,10 +310,13 @@ class GameManager(
 
             if (alivePlayers.size <= 1) return@Runnable
 
-            alivePlayers.forEach { player ->
+            alivePlayers.forEach { uuid ->
+
+                val player = getPlayer(uuid) ?: return@forEach
 
                 val nearest = alivePlayers
-                    .filter { it != player }
+                    .filter { it != uuid }
+                    .mapNotNull { getPlayer(it) }
                     .minByOrNull { it.location.distance(player.location) }
 
                 nearest?.let {
@@ -404,5 +414,13 @@ class GameManager(
 
     fun reloadConfig() {
         configManager.reload()
+    }
+
+    fun isAlive(player: Player): Boolean {
+        return alivePlayers.contains(player.uniqueId)
+    }
+
+    private fun getPlayer(uuid: UUID): Player? {
+        return Bukkit.getPlayer(uuid)
     }
 }
