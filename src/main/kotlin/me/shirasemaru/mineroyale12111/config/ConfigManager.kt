@@ -165,7 +165,7 @@ class ConfigManager(private val plugin: JavaPlugin) {
     }
 
     fun reload() {
-        plugin.reloadConfig()
+        // plugin.reloadConfig()
         load()
     }
 }

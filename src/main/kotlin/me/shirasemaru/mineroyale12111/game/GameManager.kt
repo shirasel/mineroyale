@@ -47,6 +47,12 @@ class GameManager(
         if (state != GameState.WAITING) return
 
         val players = Bukkit.getOnlinePlayers().toList()
+
+        if (players.size < configManager.minPlayers) {
+        plugin.logger.info("参加人数不足")
+        return
+        }
+
         startCountdown(players)
     }
 

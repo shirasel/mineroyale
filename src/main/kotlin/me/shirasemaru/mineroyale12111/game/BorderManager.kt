@@ -6,6 +6,7 @@ import org.bukkit.*
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -29,7 +30,7 @@ class BorderManager(
     private var phaseState = "待機中"
 
     private var pvpEnabled = false
-    private val outsideTime = mutableMapOf<Player, Int>()
+    private val outsideTime = mutableMapOf<UUID, Int>()
 
     private var gameEndTime: Long = 0
 
@@ -250,6 +251,12 @@ class BorderManager(
 
         shrinkTask?.cancel()
 
+        if (seconds <= 0) {
+            border.size = end
+            onFinish()
+            return
+        }
+
         val ticks = seconds * 20
         val diff = start - end
         val perTick = diff / ticks
@@ -349,22 +356,25 @@ class BorderManager(
         damageTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
 
             val center = border.center
-            val radius = border.size / 2 - 1
+            val radius = border.size / 2
+            val damageRadius = radius + 1
 
             world.players.forEach { player ->
 
                 val dx = abs(player.location.x - center.x)
                 val dz = abs(player.location.z - center.z)
 
-                val outside = dx > radius || dz > radius
+                val outside = dx > damageRadius || dz > damageRadius
+
+                val uuid = player.uniqueId
 
                 if (!outside) {
-                    outsideTime.remove(player)
+                    outsideTime.remove(uuid)
                     return@forEach
                 }
 
-                val time = outsideTime.getOrDefault(player, 0) + 2
-                outsideTime[player] = time
+                val time = outsideTime.getOrDefault(uuid, 0) + 2
+                outsideTime[uuid] = time
 
                 val damage = kotlin.math.min(
                     configManager.enhancedBaseDamage +

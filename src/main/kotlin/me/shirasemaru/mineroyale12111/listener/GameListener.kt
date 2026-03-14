@@ -13,9 +13,11 @@ import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerKickEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerRespawnEvent
+import org.bukkit.plugin.java.JavaPlugin
 import java.util.UUID
 
 class GameListener(
+    private val plugin: JavaPlugin,
     private val gameManager: GameManager
 ) : Listener {
 
@@ -37,7 +39,7 @@ class GameListener(
         deathLocations[player.uniqueId] = player.location.clone()
 
         Bukkit.getScheduler().runTaskLater(
-            Bukkit.getPluginManager().plugins[0],
+            plugin,
             Runnable {
                 gameManager.handlePlayerDeath(player)
             },

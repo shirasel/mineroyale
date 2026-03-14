@@ -20,22 +20,35 @@ class PlayerJoinListener(
         // スコアボード初期化（他プラグイン干渉対策）
         player.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
 
-        // 共通初期化処理
+        // 共通初期化
         val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
         player.health = maxHealth
         player.foodLevel = 20
-        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
+
+        player.activePotionEffects.forEach {
+            player.removePotionEffect(it.type)
+        }
+
+        // インベントリ初期化
+        player.inventory.clear()
+        player.inventory.armorContents = arrayOf(null, null, null, null)
+        player.inventory.setItemInOffHand(null)
 
         if (gameManager.isRunning()) {
 
-            // ゲーム途中参加 → 観戦
+            // 途中参加 → 観戦
             player.gameMode = GameMode.SPECTATOR
+
+            // GameManagerへ登録
+            // gameManager.addSpectator(player)
+
             player.sendMessage("§c現在ゲーム進行中のため観戦モードになりました。")
 
         } else {
 
-            // WAITING状態
+            // 待機状態
             player.gameMode = GameMode.SURVIVAL
+
             player.sendMessage("§aゲーム待機中です。開始をお待ちください。")
         }
     }

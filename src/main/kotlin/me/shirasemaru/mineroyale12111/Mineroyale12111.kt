@@ -51,7 +51,7 @@ class Mineroyale12111 : JavaPlugin() {
         )
 
         server.pluginManager.registerEvents(
-            GameListener(gameManager),
+            GameListener(this, gameManager),
             this
         )
 
@@ -73,7 +73,7 @@ class Mineroyale12111 : JavaPlugin() {
     override fun onDisable() {
 
         if (::gameManager.isInitialized) {
-            // ★ 安全停止（勝者表示なし）
+            // 安全停止（勝者表示なし）
             gameManager.endGame(null)
         }
 

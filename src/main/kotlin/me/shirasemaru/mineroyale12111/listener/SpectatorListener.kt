@@ -34,16 +34,24 @@ class SpectatorListener(
         if (item.type != Material.PLAYER_HEAD) return
 
         val meta = item.itemMeta as? SkullMeta ?: return
-        val target = meta.owningPlayer ?: return
+        val targetOffline = meta.owningPlayer ?: return
 
-        val targetPlayer = Bukkit.getPlayer(target.uniqueId) ?: return
+        val targetPlayer = Bukkit.getPlayer(targetOffline.uniqueId) ?: return
         if (!targetPlayer.isOnline) return
+
+        // 生存者のみ観戦可能
+        if (!gameManager.isAlive(targetPlayer)) return
 
         event.isCancelled = true
 
         player.teleport(targetPlayer.location)
 
         player.sendMessage("§e${targetPlayer.name} を観戦しています")
-        player.playSound(player.location, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f)
+        player.playSound(
+            player.location,
+            Sound.ENTITY_ENDERMAN_TELEPORT,
+            1f,
+            1f
+        )
     }
 }
