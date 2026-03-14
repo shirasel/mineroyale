@@ -254,6 +254,7 @@ class GameManager(
             } else {
                 endGame(winner)
             }
+            endGame(winner)
         }
     }
 
