@@ -13,6 +13,7 @@ import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.player.SpectatorService
 import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
+import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
@@ -34,6 +35,7 @@ class GameManager(
     private val borderManager = BorderManager(plugin, configManager, messageService) { session.pvpEnabled = it }
     private val matchLifecycleService = MatchLifecycleService(
         plugin = plugin,
+        configManager = configManager,
         scoreboardManager = scoreboardManager,
         playerRegistry = playerRegistry,
         playerSetupService = playerSetupService,
@@ -173,6 +175,9 @@ class GameManager(
     fun isAlive(player: Player): Boolean = playerRegistry.isAlive(player)
 
     fun isSpectator(player: Player): Boolean = playerRegistry.isSpectator(player)
+
+    fun isOutsideCurrentBorder(location: Location): Boolean =
+        borderManager.isOutsideBorder(location)
 
     fun teleportSpectator(spectator: Player, target: Player) {
         spectatorService.teleportSpectatorToTarget(spectator, target)

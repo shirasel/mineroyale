@@ -4,5 +4,8 @@ data class GameSettings(
     val minPlayers: Int,
     val maxPlayers: Int,
     val countdownSeconds: Int,
-    val initialPvpGraceSeconds: Int
+    val initialPvpGraceSeconds: Int,
+    val hideNameTags: Boolean,
+    val disableAdvancementAnnouncements: Boolean,
+    val restrictBlockModificationOutsideBorder: Boolean
 )

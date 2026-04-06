@@ -129,7 +129,10 @@ class BorderManagerTest {
             minPlayers = 2,
             maxPlayers = 20,
             countdownSeconds = 30,
-            initialPvpGraceSeconds = 3
+            initialPvpGraceSeconds = 3,
+            hideNameTags = false,
+            disableAdvancementAnnouncements = false,
+            restrictBlockModificationOutsideBorder = false
         )
         every { configManager.borderSettings } returns BorderSettings(
             warningDistance = 10,

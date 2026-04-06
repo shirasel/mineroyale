@@ -7,6 +7,8 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import me.shirasemaru.mineroyale12111.config.ConfigManager
+import me.shirasemaru.mineroyale12111.config.GameSettings
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.game.GameState
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
@@ -16,6 +18,7 @@ import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
@@ -65,6 +68,7 @@ class MatchLifecycleServiceTest {
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
+        val configManager = mockConfigManager()
 
         every { matchFlowService.moveToRunning(any()) } answers { firstArg<GameSession>().apply { state = GameState.RUNNING; pvpEnabled = false } }
         every { playerRegistry.resetForMatch(any()) } just runs
@@ -74,9 +78,11 @@ class MatchLifecycleServiceTest {
         every { borderManager.runPhases(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
         every { messageService.logMatchStarted(any()) } just runs
+        every { scoreboardManager.setNameTagsHidden(any()) } just runs
 
         val service = MatchLifecycleService(
             plugin = plugin,
+            configManager = configManager,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -113,6 +119,7 @@ class MatchLifecycleServiceTest {
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
+        val configManager = mockConfigManager()
 
         every { borderManager.stop() } just runs
         every { borderManager.reset(any()) } just runs
@@ -120,10 +127,12 @@ class MatchLifecycleServiceTest {
         every { messageService.broadcastGameStopped() } just runs
         every { playerSetupService.resetAllOnlinePlayersToLobby() } just runs
         every { scoreboardManager.clear() } just runs
+        every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { playerRegistry.clear() } just runs
 
         val service = MatchLifecycleService(
             plugin = plugin,
+            configManager = configManager,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -165,6 +174,7 @@ class MatchLifecycleServiceTest {
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
+        val configManager = mockConfigManager()
         val winner = mockPlayer("winner")
 
         every { matchFlowService.moveToEnding(any()) } answers { firstArg<GameSession>().state = GameState.ENDING }
@@ -173,6 +183,7 @@ class MatchLifecycleServiceTest {
         every { compassTrackingService.stop() } just runs
         every { playerSetupService.resetAllOnlinePlayersToLobby() } just runs
         every { scoreboardManager.clear() } just runs
+        every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { playerRegistry.clear() } just runs
         every { victoryService.playVictory(winner, any()) } answers {
             secondArg<() -> Unit>().invoke()
@@ -180,6 +191,7 @@ class MatchLifecycleServiceTest {
 
         val service = MatchLifecycleService(
             plugin = plugin,
+            configManager = configManager,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -204,6 +216,7 @@ class MatchLifecycleServiceTest {
     private fun createService(): MatchLifecycleService =
         MatchLifecycleService(
             plugin = mockPlugin(),
+            configManager = mockConfigManager(),
             scoreboardManager = mockk(),
             playerRegistry = mockk(),
             playerSetupService = mockk(),
@@ -213,6 +226,17 @@ class MatchLifecycleServiceTest {
             messageService = mockk(),
             matchFlowService = mockk()
         )
+
+    private fun mockConfigManager(): ConfigManager {
+        val world = mockk<World>()
+        val gameSettings = mockk<GameSettings>()
+        val configManager = mockk<ConfigManager>()
+        every { configManager.gameWorld } returns world
+        every { configManager.gameSettings } returns gameSettings
+        every { gameSettings.hideNameTags } returns false
+        every { gameSettings.disableAdvancementAnnouncements } returns false
+        return configManager
+    }
 
     private fun mockPlugin(): JavaPlugin {
         val plugin = mockk<JavaPlugin>()

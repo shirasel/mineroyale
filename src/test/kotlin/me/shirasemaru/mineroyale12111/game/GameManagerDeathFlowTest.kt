@@ -115,6 +115,7 @@ class GameManagerDeathFlowTest {
         every { messageService.spectatorHeadDisplayName(any()) } answers { Component.text(firstArg<String>()) }
         every { messageService.broadcastPlayerEliminated(any(), any()) } just runs
         every { scoreboardManager.clear() } just runs
+        every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { compassTrackingService.stop() } just runs
         every { victoryService.playVictory(any(), any()) } answers {
             secondArg<() -> Unit>().invoke()

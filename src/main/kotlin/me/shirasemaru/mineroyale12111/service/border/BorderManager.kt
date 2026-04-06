@@ -3,6 +3,7 @@ package me.shirasemaru.mineroyale12111.service.border
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.service.game.MessageService
+import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -37,6 +38,18 @@ class BorderManager(
     fun stop() {
         borderService.stop()
         borderDamageService.stop()
+    }
+
+    fun isOutsideBorder(location: Location): Boolean {
+        if (location.world?.name != world.name) {
+            return false
+        }
+
+        val center = border.center
+        val radius = border.size / 2
+        val dx = kotlin.math.abs(location.x - center.x)
+        val dz = kotlin.math.abs(location.z - center.z)
+        return dx > radius || dz > radius
     }
 
     fun reset(session: GameSession) {

@@ -46,7 +46,7 @@ class Mineroyale12111 : JavaPlugin() {
 
         server.pluginManager.registerEvents(PlayerJoinListener(gameManager), this)
         server.pluginManager.registerEvents(HealthRegainListener(gameManager), this)
-        server.pluginManager.registerEvents(GameListener(this, gameManager), this)
+        server.pluginManager.registerEvents(GameListener(this, configManager, gameManager), this)
         server.pluginManager.registerEvents(SpectatorListener(gameManager), this)
 
         val mrCommand = MrCommand(gameManager, messageService)

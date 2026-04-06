@@ -130,7 +130,10 @@ class GameManagerStartFlowTest {
             minPlayers = 2,
             maxPlayers = 10,
             countdownSeconds = 15,
-            initialPvpGraceSeconds = 30
+            initialPvpGraceSeconds = 30,
+            hideNameTags = false,
+            disableAdvancementAnnouncements = false,
+            restrictBlockModificationOutsideBorder = false
         )
         every { configManager.worldSettings } returns WorldSettings(
             name = "world",
@@ -157,6 +160,7 @@ class GameManagerStartFlowTest {
         every { playerSetupService.prepareMatchPlayers(any()) } just runs
         every { compassTrackingService.start(any()) } just runs
         every { scoreboardManager.update(any()) } just runs
+        every { scoreboardManager.setNameTagsHidden(any()) } just runs
 
         val gameManager = GameManager(
             plugin = plugin,

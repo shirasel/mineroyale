@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale12111.listener
 
+import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
@@ -8,6 +9,8 @@ import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerKickEvent
@@ -18,6 +21,7 @@ import java.util.UUID
 
 class GameListener(
     private val plugin: JavaPlugin,
+    private val configManager: ConfigManager,
     private val gameManager: GameManager
 ) : Listener {
 
@@ -70,6 +74,18 @@ class GameListener(
     }
 
     @EventHandler
+    fun onBlockPlace(event: BlockPlaceEvent) {
+        if (!shouldRestrictBlockModification(event.block.location)) return
+        event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onBlockBreak(event: BlockBreakEvent) {
+        if (!shouldRestrictBlockModification(event.block.location)) return
+        event.isCancelled = true
+    }
+
+    @EventHandler
     fun onRespawn(event: PlayerRespawnEvent) {
         if (!gameManager.isRunning()) return
 
@@ -83,5 +99,11 @@ class GameListener(
         if (gameManager.isSpectator(player)) {
             player.gameMode = GameMode.SPECTATOR
         }
+    }
+
+    private fun shouldRestrictBlockModification(location: Location): Boolean {
+        if (!gameManager.isRunning()) return false
+        if (!configManager.gameSettings.restrictBlockModificationOutsideBorder) return false
+        return gameManager.isOutsideCurrentBorder(location)
     }
 }

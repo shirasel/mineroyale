@@ -51,7 +51,10 @@ class BorderServiceTest {
                 minPlayers = 2,
                 maxPlayers = 20,
                 countdownSeconds = 30,
-                initialPvpGraceSeconds = 3
+                initialPvpGraceSeconds = 3,
+                hideNameTags = false,
+                disableAdvancementAnnouncements = false,
+                restrictBlockModificationOutsideBorder = false
             )
         )
         val messageService = mockk<MessageService>(relaxed = true)
@@ -99,7 +102,10 @@ class BorderServiceTest {
                 minPlayers = 2,
                 maxPlayers = 20,
                 countdownSeconds = 30,
-                initialPvpGraceSeconds = 2
+                initialPvpGraceSeconds = 2,
+                hideNameTags = false,
+                disableAdvancementAnnouncements = false,
+                restrictBlockModificationOutsideBorder = false
             ),
             worldSettings = WorldSettings(
                 name = "world",
@@ -219,7 +225,10 @@ class BorderServiceTest {
             minPlayers = 2,
             maxPlayers = 20,
             countdownSeconds = 30,
-            initialPvpGraceSeconds = 45
+            initialPvpGraceSeconds = 45,
+            hideNameTags = false,
+            disableAdvancementAnnouncements = false,
+            restrictBlockModificationOutsideBorder = false
         )
     ): ConfigManager {
         val configManager = mockk<ConfigManager>()

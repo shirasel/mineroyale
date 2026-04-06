@@ -118,7 +118,10 @@ class PlayerJoinListenerTest {
             minPlayers = 2,
             maxPlayers = 10,
             countdownSeconds = 15,
-            initialPvpGraceSeconds = 30
+            initialPvpGraceSeconds = 30,
+            hideNameTags = false,
+            disableAdvancementAnnouncements = false,
+            restrictBlockModificationOutsideBorder = false
         )
         every { configManager.borderSettings } returns BorderSettings(
             warningDistance = 10,

@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale12111.service.game
 
+import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
@@ -8,12 +9,14 @@ import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.GameRule
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
 
 class MatchLifecycleService(
     private val plugin: JavaPlugin,
+    private val configManager: ConfigManager,
     private val scoreboardManager: ScoreboardManager,
     private val playerRegistry: PlayerRegistry,
     private val playerSetupService: PlayerSetupService,
@@ -25,6 +28,7 @@ class MatchLifecycleService(
 ) {
 
     private var scoreboardTask: BukkitTask? = null
+    private var originalAnnounceAdvancements: Boolean? = null
 
     fun getEligiblePlayers(): List<Player> =
         Bukkit.getOnlinePlayers()
@@ -37,6 +41,7 @@ class MatchLifecycleService(
         session.participantCount = players.size
         session.aliveCount = players.size
 
+        applyMatchRules()
         borderManager.initialize(session)
         playerSetupService.prepareMatchPlayers(borderManager.generateRandomSpawnLocations(players))
         borderManager.runPhases(session, onMatchComplete)
@@ -76,10 +81,32 @@ class MatchLifecycleService(
     }
 
     private fun resetGame(session: GameSession) {
+        restoreMatchRules()
         playerSetupService.resetAllOnlinePlayersToLobby()
         scoreboardManager.clear()
         playerRegistry.clear()
         session.resetToWaiting()
+    }
+
+    private fun applyMatchRules() {
+        scoreboardManager.setNameTagsHidden(configManager.gameSettings.hideNameTags)
+
+        if (!configManager.gameSettings.disableAdvancementAnnouncements) {
+            originalAnnounceAdvancements = null
+            return
+        }
+
+        val world = configManager.gameWorld
+        originalAnnounceAdvancements = world.getGameRuleValue(GameRule.ANNOUNCE_ADVANCEMENTS)
+        world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false)
+    }
+
+    private fun restoreMatchRules() {
+        scoreboardManager.setNameTagsHidden(false)
+
+        val original = originalAnnounceAdvancements ?: return
+        configManager.gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, original)
+        originalAnnounceAdvancements = null
     }
 
     private fun startScoreboardTask(session: GameSession) {

@@ -7,12 +7,16 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import me.shirasemaru.mineroyale12111.config.ConfigManager
+import me.shirasemaru.mineroyale12111.config.GameSettings
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerKickEvent
@@ -40,10 +44,11 @@ class GameListenerTest {
         mockkStatic(Bukkit::class)
 
         val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
         val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
         val scheduler = mockk<BukkitScheduler>()
         val task = mockk<BukkitTask>(relaxed = true)
-        val listener = GameListener(plugin, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val deathLocation = Location(mockk<World>(), 10.0, 64.0, -5.0)
         val event = mockk<PlayerDeathEvent>()
@@ -73,8 +78,9 @@ class GameListenerTest {
     @Test
     fun `onQuit and onKick delegate to handlePlayerDeath only while running`() {
         val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
         val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
-        val listener = GameListener(plugin, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val quitEvent = mockk<PlayerQuitEvent>()
         val kickEvent = mockk<PlayerKickEvent>()
@@ -97,8 +103,9 @@ class GameListenerTest {
     @Test
     fun `onDamage cancels pvp damage when game is running and pvp is disabled`() {
         val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
         val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
-        val listener = GameListener(plugin, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager)
         val attacker = mockPlayer()
         val victim = mockPlayer()
         val event = mockDamageEvent(attacker, victim)
@@ -114,8 +121,9 @@ class GameListenerTest {
     @Test
     fun `onDamage does not cancel when attacker is not a player source`() {
         val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
         val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
-        val listener = GameListener(plugin, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager)
         val nonPlayerProjectile = mockk<Projectile>()
         val nonPlayerSource = mockk<ProjectileSource>()
         val victim = mockPlayer()
@@ -131,10 +139,48 @@ class GameListenerTest {
     }
 
     @Test
+    fun `onBlockPlace and onBlockBreak cancel modifications outside border when enabled`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager(restrictBlockModificationOutsideBorder = true)
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val outsideLocation = Location(mockk<World>(), 200.0, 64.0, 200.0)
+        val placeEvent = mockBlockPlaceEvent(outsideLocation)
+        val breakEvent = mockBlockBreakEvent(outsideLocation)
+
+        every { gameManager.isRunning() } returns true
+        every { gameManager.isOutsideCurrentBorder(outsideLocation) } returns true
+
+        listener.onBlockPlace(placeEvent)
+        listener.onBlockBreak(breakEvent)
+
+        assertTrue(placeEvent.isCancelled())
+        assertTrue(breakEvent.isCancelled())
+    }
+
+    @Test
+    fun `onBlockPlace ignores border check when restriction is disabled`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager(restrictBlockModificationOutsideBorder = false)
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val outsideLocation = Location(mockk<World>(), 200.0, 64.0, 200.0)
+        val placeEvent = mockBlockPlaceEvent(outsideLocation)
+
+        every { gameManager.isRunning() } returns true
+
+        listener.onBlockPlace(placeEvent)
+
+        assertFalse(placeEvent.isCancelled())
+        verify(exactly = 0) { gameManager.isOutsideCurrentBorder(any()) }
+    }
+
+    @Test
     fun `onRespawn restores death location and spectator mode for spectators`() {
         val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
         val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
-        val listener = GameListener(plugin, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val deathEvent = mockk<PlayerDeathEvent>()
         val respawnEvent = mockRespawnEvent(player)
@@ -187,5 +233,37 @@ class GameListenerTest {
         every { event.respawnLocation } answers { respawnLocation }
         every { event.respawnLocation = any() } answers { respawnLocation = firstArg() }
         return event
+    }
+
+    private fun mockBlockPlaceEvent(location: Location): BlockPlaceEvent {
+        var cancelled = false
+        val block = mockk<org.bukkit.block.Block>()
+        val event = mockk<BlockPlaceEvent>()
+        every { block.location } returns location
+        every { event.block } returns block
+        every { event.isCancelled() } answers { cancelled }
+        every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        return event
+    }
+
+    private fun mockBlockBreakEvent(location: Location): BlockBreakEvent {
+        var cancelled = false
+        val block = mockk<org.bukkit.block.Block>()
+        val event = mockk<BlockBreakEvent>()
+        every { block.location } returns location
+        every { event.block } returns block
+        every { event.isCancelled() } answers { cancelled }
+        every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        return event
+    }
+
+    private fun mockConfigManager(
+        restrictBlockModificationOutsideBorder: Boolean = false
+    ): ConfigManager {
+        val gameSettings = mockk<GameSettings>()
+        val configManager = mockk<ConfigManager>()
+        every { configManager.gameSettings } returns gameSettings
+        every { gameSettings.restrictBlockModificationOutsideBorder } returns restrictBlockModificationOutsideBorder
+        return configManager
     }
 }

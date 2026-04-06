@@ -45,7 +45,10 @@ class ConfigManager(private val plugin: JavaPlugin) {
             minPlayers = config.getInt("game.min-players", 2),
             maxPlayers = config.getInt("game.max-players", 20),
             countdownSeconds = config.getInt("game.countdown-seconds", 30),
-            initialPvpGraceSeconds = config.getInt("game.initial-pvp-grace-seconds", 45)
+            initialPvpGraceSeconds = config.getInt("game.initial-pvp-grace-seconds", 45),
+            hideNameTags = config.getBoolean("game.hide-name-tags", false),
+            disableAdvancementAnnouncements = config.getBoolean("game.disable-advancement-announcements", false),
+            restrictBlockModificationOutsideBorder = config.getBoolean("game.restrict-block-modification-outside-border", false)
         )
 
     private fun loadWorldSettings(): WorldSettings =
