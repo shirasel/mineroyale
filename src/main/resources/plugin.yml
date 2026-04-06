@@ -5,11 +5,11 @@ api-version: '1.21'
 
 commands:
   mr:
-    description: Mineroyaleメインコマンド
+    description: MineRoyale メインコマンド
     usage: /mr <start|stop|reload>
     permission: mineroyale.admin
 
 permissions:
   mineroyale.admin:
-    description: Mineroyale管理者権限
+    description: MineRoyale 管理者権限
     default: op

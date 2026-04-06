@@ -1,0 +1,231 @@
+package me.shirasemaru.mineroyale12111.service.game
+
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.runs
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import me.shirasemaru.mineroyale12111.game.GameSession
+import me.shirasemaru.mineroyale12111.game.GameState
+import me.shirasemaru.mineroyale12111.service.border.BorderManager
+import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
+import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
+import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
+import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
+import org.bukkit.Bukkit
+import org.bukkit.GameMode
+import org.bukkit.entity.Player
+import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.scheduler.BukkitScheduler
+import org.bukkit.scheduler.BukkitTask
+import java.util.logging.Logger
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class MatchLifecycleServiceTest {
+
+    @AfterTest
+    fun tearDown() {
+        unmockkStatic(Bukkit::class)
+    }
+
+    @Test
+    fun `getEligiblePlayers filters out spectators and sorts by name`() {
+        mockkStatic(Bukkit::class)
+        val activeB = mockPlayer("bravo", GameMode.SURVIVAL)
+        val spectator = mockPlayer("charlie", GameMode.SPECTATOR)
+        val activeA = mockPlayer("alpha", GameMode.ADVENTURE)
+
+        every { Bukkit.getOnlinePlayers() } returns linkedSetOf(activeB, spectator, activeA)
+
+        val service = createService()
+
+        val result = service.getEligiblePlayers()
+
+        assertEquals(listOf(activeA, activeB), result)
+    }
+
+    @Test
+    fun `startMatch moves session to running and initializes collaborators`() {
+        mockkStatic(Bukkit::class)
+        val scheduler = mockk<BukkitScheduler>()
+        val task = mockk<BukkitTask>()
+        every { Bukkit.getScheduler() } returns scheduler
+        every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) } returns task
+
+        val borderManager = mockk<BorderManager>()
+        val playerRegistry = mockk<PlayerRegistry>()
+        val playerSetupService = mockk<PlayerSetupService>()
+        val compassTrackingService = mockk<CompassTrackingService>()
+        val victoryService = mockk<VictoryService>()
+        val messageService = mockk<MessageService>()
+        val matchFlowService = mockk<MatchFlowService>()
+        val plugin = mockPlugin()
+        val scoreboardManager = mockk<ScoreboardManager>()
+
+        every { matchFlowService.moveToRunning(any()) } answers { firstArg<GameSession>().apply { state = GameState.RUNNING; pvpEnabled = false } }
+        every { playerRegistry.resetForMatch(any()) } just runs
+        every { borderManager.initialize(any()) } just runs
+        every { borderManager.generateRandomSpawnLocations(any()) } returns emptyMap()
+        every { playerSetupService.prepareMatchPlayers(any()) } just runs
+        every { borderManager.runPhases(any(), any()) } just runs
+        every { compassTrackingService.start(any()) } just runs
+        every { messageService.logMatchStarted(any()) } just runs
+
+        val service = MatchLifecycleService(
+            plugin = plugin,
+            scoreboardManager = scoreboardManager,
+            playerRegistry = playerRegistry,
+            playerSetupService = playerSetupService,
+            borderManager = borderManager,
+            compassTrackingService = compassTrackingService,
+            victoryService = victoryService,
+            messageService = messageService,
+            matchFlowService = matchFlowService
+        )
+
+        val session = GameSession()
+        val players = listOf(mockPlayer("alpha"), mockPlayer("bravo"))
+
+        service.startMatch(session, players) {}
+
+        assertEquals(GameState.RUNNING, session.state)
+        assertEquals(2, session.participantCount)
+        assertEquals(2, session.aliveCount)
+        verify { borderManager.initialize(session) }
+        verify { playerSetupService.prepareMatchPlayers(emptyMap()) }
+        verify { borderManager.runPhases(session, any()) }
+        verify { compassTrackingService.start(any()) }
+        verify { messageService.logMatchStarted(any()) }
+    }
+
+    @Test
+    fun `stopCurrentMatch resets session and clears collaborators`() {
+        val borderManager = mockk<BorderManager>()
+        val playerRegistry = mockk<PlayerRegistry>()
+        val playerSetupService = mockk<PlayerSetupService>()
+        val compassTrackingService = mockk<CompassTrackingService>()
+        val victoryService = mockk<VictoryService>()
+        val messageService = mockk<MessageService>()
+        val matchFlowService = mockk<MatchFlowService>()
+        val plugin = mockPlugin()
+        val scoreboardManager = mockk<ScoreboardManager>()
+
+        every { borderManager.stop() } just runs
+        every { borderManager.reset(any()) } just runs
+        every { compassTrackingService.stop() } just runs
+        every { messageService.broadcastGameStopped() } just runs
+        every { playerSetupService.resetAllOnlinePlayersToLobby() } just runs
+        every { scoreboardManager.clear() } just runs
+        every { playerRegistry.clear() } just runs
+
+        val service = MatchLifecycleService(
+            plugin = plugin,
+            scoreboardManager = scoreboardManager,
+            playerRegistry = playerRegistry,
+            playerSetupService = playerSetupService,
+            borderManager = borderManager,
+            compassTrackingService = compassTrackingService,
+            victoryService = victoryService,
+            messageService = messageService,
+            matchFlowService = matchFlowService
+        )
+
+        val session = GameSession(
+            state = GameState.RUNNING,
+            participantCount = 4,
+            aliveCount = 2,
+            currentPhase = 2
+        )
+
+        service.stopCurrentMatch(session)
+
+        assertEquals(GameState.WAITING, session.state)
+        assertEquals(0, session.participantCount)
+        assertEquals(0, session.aliveCount)
+        verify { borderManager.stop() }
+        verify { borderManager.reset(session) }
+        verify { compassTrackingService.stop() }
+        verify { messageService.broadcastGameStopped() }
+        verify { scoreboardManager.clear() }
+        verify { playerRegistry.clear() }
+    }
+
+    @Test
+    fun `finishMatch with winner runs victory flow and resets session after callback`() {
+        val borderManager = mockk<BorderManager>()
+        val playerRegistry = mockk<PlayerRegistry>()
+        val playerSetupService = mockk<PlayerSetupService>()
+        val compassTrackingService = mockk<CompassTrackingService>()
+        val victoryService = mockk<VictoryService>()
+        val messageService = mockk<MessageService>()
+        val matchFlowService = mockk<MatchFlowService>()
+        val plugin = mockPlugin()
+        val scoreboardManager = mockk<ScoreboardManager>()
+        val winner = mockPlayer("winner")
+
+        every { matchFlowService.moveToEnding(any()) } answers { firstArg<GameSession>().state = GameState.ENDING }
+        every { borderManager.stop() } just runs
+        every { borderManager.reset(any()) } just runs
+        every { compassTrackingService.stop() } just runs
+        every { playerSetupService.resetAllOnlinePlayersToLobby() } just runs
+        every { scoreboardManager.clear() } just runs
+        every { playerRegistry.clear() } just runs
+        every { victoryService.playVictory(winner, any()) } answers {
+            secondArg<() -> Unit>().invoke()
+        }
+
+        val service = MatchLifecycleService(
+            plugin = plugin,
+            scoreboardManager = scoreboardManager,
+            playerRegistry = playerRegistry,
+            playerSetupService = playerSetupService,
+            borderManager = borderManager,
+            compassTrackingService = compassTrackingService,
+            victoryService = victoryService,
+            messageService = messageService,
+            matchFlowService = matchFlowService
+        )
+
+        val session = GameSession(state = GameState.RUNNING, aliveCount = 1)
+
+        service.finishMatch(session, winner)
+
+        assertEquals(GameState.WAITING, session.state)
+        verify { victoryService.playVictory(winner, any()) }
+        verify(exactly = 0) { messageService.broadcastNoWinner() }
+        verify { scoreboardManager.clear() }
+        verify { playerRegistry.clear() }
+    }
+
+    private fun createService(): MatchLifecycleService =
+        MatchLifecycleService(
+            plugin = mockPlugin(),
+            scoreboardManager = mockk(),
+            playerRegistry = mockk(),
+            playerSetupService = mockk(),
+            borderManager = mockk(),
+            compassTrackingService = mockk(),
+            victoryService = mockk(),
+            messageService = mockk(),
+            matchFlowService = mockk()
+        )
+
+    private fun mockPlugin(): JavaPlugin {
+        val plugin = mockk<JavaPlugin>()
+        every { plugin.logger } returns Logger.getLogger("test")
+        return plugin
+    }
+
+    private fun mockPlayer(name: String, gameMode: GameMode = GameMode.SURVIVAL): Player {
+        val player = mockk<Player>()
+        every { player.name } returns name
+        every { player.uniqueId } returns java.util.UUID.nameUUIDFromBytes(name.toByteArray())
+        every { player.gameMode } returns gameMode
+        every { player.isOnline } returns true
+        return player
+    }
+}

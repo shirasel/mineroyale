@@ -6,64 +6,51 @@ game:
   min-players: 2
   max-players: 20
   countdown-seconds: 30
+  initial-pvp-grace-seconds: 45
 
 world:
   name: world
 
-  # ランダム中心の基準範囲（±この値）
-  # 例: 2000 → -2000 ～ +2000 の範囲内で中心抽選
+  # ランダムに選ぶボーダー中心の最大距離
   random-center-range: 2000
 
   # 初期ボーダーサイズ
   initial-border-size: 1000
 
 spawn:
-  # プレイヤー同士の最低距離
+  # プレイヤー同士の最小スポーン距離
   min-distance: 50
 
 border:
-  damage-per-second: 1.0
   warning-distance: 10
   warning-time: 5
 
-  # =========================
-  # フェーズ設定
-  # wait = 縮小開始までの待機時間（秒）
-  # duration = 縮小にかける時間（秒）
-  # size = 縮小後の目標サイズ
-  # =========================
   phases:
-    - wait: 60
-      duration: 300
-      size: 600
-
     - wait: 45
       duration: 240
-      size: 400
+      size: 600
 
     - wait: 30
       duration: 180
-      size: 200
+      size: 400
 
     - wait: 20
       duration: 120
+      size: 200
+
+    - wait: 15
+      duration: 90
       size: 100
 
     - wait: 10
-      duration: 90
+      duration: 60
       size: 50
 
-  # =========================
-  # 最終円特別挙動
-  # =========================
   final-phase:
     enable-smooth-move: true
     move-range: 40
     move-duration-seconds: 20
 
-  # =========================
-  # ボーダー外ダメージ強化
-  # =========================
   enhanced-damage:
     enabled: true
     base-damage: 1.0

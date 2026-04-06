@@ -1,2 +1,6 @@
 # プロジェクトの除外パス
 /.gradle/
+/build/
+/.kotlin/
+/.idea/modules/
+*.iml

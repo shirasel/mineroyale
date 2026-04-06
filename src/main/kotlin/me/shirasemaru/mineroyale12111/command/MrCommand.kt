@@ -1,8 +1,7 @@
 package me.shirasemaru.mineroyale12111.command
 
 import me.shirasemaru.mineroyale12111.game.GameManager
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
+import me.shirasemaru.mineroyale12111.service.game.MessageService
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -10,7 +9,8 @@ import org.bukkit.command.TabCompleter
 import org.bukkit.entity.Player
 
 class MrCommand(
-    private val gameManager: GameManager
+    private val gameManager: GameManager,
+    private val messageService: MessageService
 ) : CommandExecutor, TabCompleter {
 
     override fun onCommand(
@@ -19,53 +19,47 @@ class MrCommand(
         label: String,
         args: Array<out String>
     ): Boolean {
-
         if (sender !is Player) {
-            sender.sendMessage("このコマンドはプレイヤーのみ実行可能です。")
+            messageService.sendPlayersOnlyCommandMessage(sender)
             return true
         }
 
         if (!sender.hasPermission("mineroyale.admin")) {
-            sender.sendMessage("§cこのコマンドを実行する権限がありません。")
+            messageService.sendNoPermissionMessage(sender)
             return true
         }
 
         if (args.isEmpty()) {
-            sender.sendMessage("§e使用方法: /mr <start|stop|reload>")
+            messageService.sendCommandUsageMessage(sender)
             return true
         }
 
         when (args[0].lowercase()) {
-
             "start" -> {
-
-                if (gameManager.isRunning()) {
-                    sender.sendMessage("§cゲームは既に開始されています。")
+                if (!gameManager.canStartNewGame()) {
+                    messageService.sendCannotStartMessage(sender)
                     return true
                 }
 
-                sender.server.broadcast(Component.text("ゲームを開始します！", NamedTextColor.GREEN))
+                messageService.broadcastCountdownStartRequested()
                 gameManager.startGame()
             }
 
             "stop" -> {
-
-                if (!gameManager.isRunning()) {
-                    sender.sendMessage("§c現在ゲームは実行中ではありません。")
+                if (!gameManager.canStopGame()) {
+                    messageService.sendCannotStopMessage(sender)
                     return true
                 }
 
-                gameManager.endGame(null)
-                sender.server.broadcast(Component.text("管理者によりゲームが強制終了されました。", NamedTextColor.GREEN))
+                gameManager.stopGame()
             }
 
             "reload" -> {
-
                 gameManager.reloadConfig()
-                sender.sendMessage("configをリロードしました。")
+                messageService.sendConfigReloadedMessage(sender)
             }
 
-            else -> sender.sendMessage("§c不明なサブコマンドです。")
+            else -> messageService.sendUnknownSubcommandMessage(sender)
         }
 
         return true
@@ -77,7 +71,6 @@ class MrCommand(
         alias: String,
         args: Array<out String>
     ): List<String> {
-
         if (args.size == 1) {
             return listOf("start", "stop", "reload")
                 .filter { it.startsWith(args[0].lowercase()) }

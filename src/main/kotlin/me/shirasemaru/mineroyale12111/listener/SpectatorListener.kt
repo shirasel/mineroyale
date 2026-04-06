@@ -4,12 +4,10 @@ import me.shirasemaru.mineroyale12111.game.GameManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
-import org.bukkit.Sound
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
-import org.bukkit.inventory.meta.SkullMeta
 
 class SpectatorListener(
     private val gameManager: GameManager
@@ -17,41 +15,23 @@ class SpectatorListener(
 
     @EventHandler
     fun onRightClick(event: PlayerInteractEvent) {
-
         val player = event.player
 
-        // ゲーム中のみ
         if (!gameManager.isRunning()) return
-
-        // 観戦者のみ
         if (player.gameMode != GameMode.SPECTATOR) return
-
-        // 右クリックのみ
         if (event.action != Action.RIGHT_CLICK_AIR &&
-            event.action != Action.RIGHT_CLICK_BLOCK) return
+            event.action != Action.RIGHT_CLICK_BLOCK
+        ) return
 
         val item = event.item ?: return
         if (item.type != Material.PLAYER_HEAD) return
 
-        val meta = item.itemMeta as? SkullMeta ?: return
-        val targetOffline = meta.owningPlayer ?: return
-
-        val targetPlayer = Bukkit.getPlayer(targetOffline.uniqueId) ?: return
+        val targetName = gameManager.extractSpectatorTargetName(item) ?: return
+        val targetPlayer = Bukkit.getPlayerExact(targetName) ?: return
         if (!targetPlayer.isOnline) return
-
-        // 生存者のみ観戦可能
         if (!gameManager.isAlive(targetPlayer)) return
 
         event.isCancelled = true
-
-        player.teleport(targetPlayer.location)
-
-        player.sendMessage("§e${targetPlayer.name} を観戦しています")
-        player.playSound(
-            player.location,
-            Sound.ENTITY_ENDERMAN_TELEPORT,
-            1f,
-            1f
-        )
+        gameManager.teleportSpectator(player, targetPlayer)
     }
 }

@@ -23,70 +23,42 @@ class GameListener(
 
     private val deathLocations = HashMap<UUID, Location>()
 
-
-    /*
-     * プレイヤー死亡
-     * 1tick遅らせて処理（リスポーン不能バグ対策）
-     */
     @EventHandler
     fun onDeath(event: PlayerDeathEvent) {
-
         if (!gameManager.isRunning()) return
 
         val player = event.entity
-
-        // 死亡地点を保存
         deathLocations[player.uniqueId] = player.location.clone()
 
         Bukkit.getScheduler().runTaskLater(
             plugin,
-            Runnable {
-                gameManager.handlePlayerDeath(player)
-            },
+            Runnable { gameManager.handlePlayerDeath(player) },
             1L
         )
     }
 
-    /*
-     * プレイヤー退出
-     */
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
-
         if (!gameManager.isRunning()) return
-
         gameManager.handlePlayerDeath(event.player)
     }
 
-    /*
-     * キック
-     */
     @EventHandler
     fun onKick(event: PlayerKickEvent) {
-
         if (!gameManager.isRunning()) return
-
         gameManager.handlePlayerDeath(event.player)
     }
 
-    /*
-     * PvP制御
-     * 弓・トライデント対応
-     */
     @EventHandler
     fun onDamage(event: EntityDamageByEntityEvent) {
-
         if (!gameManager.isRunning()) return
 
         val victim = event.entity
         if (victim !is Player) return
 
         val attacker: Player? = when (val damager = event.damager) {
-
             is Player -> damager
-
             is Projectile -> damager.shooter as? Player
-
             else -> null
         }
 
@@ -97,24 +69,18 @@ class GameListener(
         }
     }
 
-    /*
-     * リスポーン処理
-     */
     @EventHandler
     fun onRespawn(event: PlayerRespawnEvent) {
-
         if (!gameManager.isRunning()) return
 
         val player = event.player
+        val location = deathLocations.remove(player.uniqueId)
 
-        val loc = deathLocations[player.uniqueId]
-
-        if (loc != null) {
-            event.respawnLocation = loc
-            deathLocations.remove(player.uniqueId)
+        if (location != null) {
+            event.respawnLocation = location
         }
 
-        if (!gameManager.isAlive(player)) {
+        if (gameManager.isSpectator(player)) {
             player.gameMode = GameMode.SPECTATOR
         }
     }

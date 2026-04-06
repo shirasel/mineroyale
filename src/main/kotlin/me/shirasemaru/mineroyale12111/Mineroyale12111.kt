@@ -7,6 +7,13 @@ import me.shirasemaru.mineroyale12111.listener.GameListener
 import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
 import me.shirasemaru.mineroyale12111.listener.PlayerJoinListener
 import me.shirasemaru.mineroyale12111.listener.SpectatorListener
+import me.shirasemaru.mineroyale12111.service.game.CountdownService
+import me.shirasemaru.mineroyale12111.service.game.MessageService
+import me.shirasemaru.mineroyale12111.service.game.VictoryService
+import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
+import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
+import me.shirasemaru.mineroyale12111.service.player.SpectatorService
+import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -15,68 +22,45 @@ class Mineroyale12111 : JavaPlugin() {
     private lateinit var gameManager: GameManager
     private lateinit var scoreboardManager: ScoreboardManager
     private lateinit var configManager: ConfigManager
+    private lateinit var messageService: MessageService
 
     override fun onEnable() {
-
-        /* ==========================
-           Config生成
-         ========================== */
         saveDefaultConfig()
         configManager = ConfigManager(this)
         configManager.load()
-
-        /* ==========================
-           マネージャー初期化（順番重要）
-         ========================== */
         scoreboardManager = ScoreboardManager()
+        messageService = MessageService()
 
         gameManager = GameManager(
             this,
             configManager,
-            scoreboardManager
+            PlayerRegistry(),
+            PlayerSetupService(),
+            SpectatorService(),
+            CountdownService(this),
+            messageService,
+            scoreboardManager,
+            VictoryService(this, messageService),
+            CompassTrackingService(this)
         )
 
-        /* ==========================
-           Listener登録
-         ========================== */
+        server.pluginManager.registerEvents(PlayerJoinListener(gameManager), this)
+        server.pluginManager.registerEvents(HealthRegainListener(gameManager), this)
+        server.pluginManager.registerEvents(GameListener(this, gameManager), this)
+        server.pluginManager.registerEvents(SpectatorListener(gameManager), this)
 
-        server.pluginManager.registerEvents(
-            PlayerJoinListener(gameManager),
-            this
-        )
+        val mrCommand = MrCommand(gameManager, messageService)
+        getCommand("mr")?.setExecutor(mrCommand)
+        getCommand("mr")?.setTabCompleter(mrCommand)
 
-        server.pluginManager.registerEvents(
-            HealthRegainListener(gameManager),
-            this
-        )
-
-        server.pluginManager.registerEvents(
-            GameListener(this, gameManager),
-            this
-        )
-
-        server.pluginManager.registerEvents(
-            SpectatorListener(gameManager),
-            this
-        )
-
-        /* ==========================
-           コマンド登録
-         ========================== */
-        getCommand("mr")?.setExecutor(
-            MrCommand(gameManager)
-        )
-
-        logger.info("Mineroyale12111 が有効化されました！")
+        logger.info("Mineroyale12111 を有効化しました。")
     }
 
     override fun onDisable() {
-
         if (::gameManager.isInitialized) {
-            // 安全停止（勝者表示なし）
-            gameManager.endGame(null)
+            gameManager.stopGame()
         }
 
-        logger.info("Mineroyale12111 が無効化されました。")
+        logger.info("Mineroyale12111 を無効化しました。")
     }
 }
