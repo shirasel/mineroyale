@@ -121,7 +121,7 @@ class BorderService(
     ) {
         if (index >= phases.size) {
             if (configManager.borderSettings.finalPhase.enabled) {
-                startFinalMove(session, border, onComplete)
+                startFinalMove(session, border)
             } else {
                 onComplete()
             }
@@ -201,32 +201,37 @@ class BorderService(
         }, 0L, 1L)
     }
 
-    private fun startFinalMove(session: GameSession, border: WorldBorder, onComplete: () -> Unit) {
+    private fun startFinalMove(session: GameSession, border: WorldBorder) {
         val range = configManager.borderSettings.finalPhase.moveRange
         val duration = configManager.borderSettings.finalPhase.moveDurationSeconds
 
         if (range <= 0 || duration <= 0) {
-            onComplete()
             return
         }
 
-        val start = border.center
-        val targetX = start.x + Random.nextDouble(-range, range)
-        val targetZ = start.z + Random.nextDouble(-range, range)
         val ticks = duration * 20
-        val moveX = (targetX - start.x) / ticks
-        val moveZ = (targetZ - start.z) / ticks
-
         var count = 0
+        var moveX = 0.0
+        var moveZ = 0.0
         moveTask?.cancel()
         session.phaseState = PhaseState.FINAL_MOVING.displayName
-        startPhaseCountdown(session, duration)
+
+        fun chooseNextTarget() {
+            val start = border.center
+            val targetX = start.x + Random.nextDouble(-range, range)
+            val targetZ = start.z + Random.nextDouble(-range, range)
+            moveX = (targetX - start.x) / ticks
+            moveZ = (targetZ - start.z) / ticks
+            count = 0
+            startPhaseCountdown(session, duration)
+        }
+
+        chooseNextTarget()
 
         moveTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
             if (count >= ticks) {
-                moveTask?.cancel()
                 updateRemainingGameSeconds(session)
-                onComplete()
+                chooseNextTarget()
                 return@Runnable
             }
 

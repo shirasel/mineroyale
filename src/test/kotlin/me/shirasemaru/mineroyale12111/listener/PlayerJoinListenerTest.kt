@@ -119,6 +119,8 @@ class PlayerJoinListenerTest {
             maxPlayers = 10,
             countdownSeconds = 15,
             initialPvpGraceSeconds = 30,
+            showPlayerLocatorBar = true,
+            giveInitialCompass = true,
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
             restrictBlockModificationOutsideBorder = false

@@ -5,6 +5,8 @@ data class GameSettings(
     val maxPlayers: Int,
     val countdownSeconds: Int,
     val initialPvpGraceSeconds: Int,
+    val showPlayerLocatorBar: Boolean,
+    val giveInitialCompass: Boolean,
     val hideNameTags: Boolean,
     val disableAdvancementAnnouncements: Boolean,
     val restrictBlockModificationOutsideBorder: Boolean

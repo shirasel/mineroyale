@@ -52,6 +52,8 @@ class BorderServiceTest {
                 maxPlayers = 20,
                 countdownSeconds = 30,
                 initialPvpGraceSeconds = 3,
+                showPlayerLocatorBar = true,
+                giveInitialCompass = true,
                 hideNameTags = false,
                 disableAdvancementAnnouncements = false,
                 restrictBlockModificationOutsideBorder = false
@@ -103,6 +105,8 @@ class BorderServiceTest {
                 maxPlayers = 20,
                 countdownSeconds = 30,
                 initialPvpGraceSeconds = 2,
+                showPlayerLocatorBar = true,
+                giveInitialCompass = true,
                 hideNameTags = false,
                 disableAdvancementAnnouncements = false,
                 restrictBlockModificationOutsideBorder = false
@@ -174,7 +178,7 @@ class BorderServiceTest {
     }
 
     @Test
-    fun `runPhases delays completion until final move finishes`() {
+    fun `runPhases keeps final move running by retargeting continuously`() {
         val schedulerDriver = TestSchedulerDriver()
         val plugin = mockPlugin(schedulerDriver.scheduler)
         val configManager = mockConfigManager(
@@ -200,10 +204,13 @@ class BorderServiceTest {
         assertEquals(PhaseState.FINAL_MOVING.displayName, session.phaseState)
         verify(exactly = 1) { messageService.broadcastFinalMoveStarted() }
 
+        val firstCenter = border.center
+
         schedulerDriver.advanceTicks(21)
 
-        assertTrue(completed)
-        assertEquals(0, session.remainingPhaseSeconds)
+        assertFalse(completed)
+        assertTrue(border.center.x != firstCenter.x || border.center.z != firstCenter.z)
+        assertTrue(session.remainingPhaseSeconds in 0..1)
     }
 
     private fun mockPlugin(scheduler: BukkitScheduler): JavaPlugin {
@@ -226,6 +233,8 @@ class BorderServiceTest {
             maxPlayers = 20,
             countdownSeconds = 30,
             initialPvpGraceSeconds = 45,
+            showPlayerLocatorBar = true,
+            giveInitialCompass = true,
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
             restrictBlockModificationOutsideBorder = false

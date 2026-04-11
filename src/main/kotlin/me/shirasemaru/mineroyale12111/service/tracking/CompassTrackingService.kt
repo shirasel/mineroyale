@@ -1,17 +1,23 @@
 package me.shirasemaru.mineroyale12111.service.tracking
 
+import me.shirasemaru.mineroyale12111.config.ConfigManager
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
 
 class CompassTrackingService(
-    private val plugin: JavaPlugin
+    private val plugin: JavaPlugin,
+    private val configManager: ConfigManager
 ) {
 
     private var task: BukkitTask? = null
 
     fun start(aliveProvider: () -> List<Player>) {
         stop()
+
+        if (!configManager.gameSettings.showPlayerLocatorBar) {
+            return
+        }
 
         task = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
             val alivePlayers = aliveProvider()

@@ -35,13 +35,13 @@ class Mineroyale12111 : JavaPlugin() {
             this,
             configManager,
             PlayerRegistry(),
-            PlayerSetupService(),
+            PlayerSetupService(configManager),
             SpectatorService(),
             CountdownService(this),
             messageService,
             scoreboardManager,
             VictoryService(this, messageService),
-            CompassTrackingService(this)
+            CompassTrackingService(this, configManager)
         )
 
         server.pluginManager.registerEvents(PlayerJoinListener(gameManager), this)

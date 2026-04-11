@@ -130,6 +130,8 @@ class BorderManagerTest {
             maxPlayers = 20,
             countdownSeconds = 30,
             initialPvpGraceSeconds = 3,
+            showPlayerLocatorBar = true,
+            giveInitialCompass = true,
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
             restrictBlockModificationOutsideBorder = false

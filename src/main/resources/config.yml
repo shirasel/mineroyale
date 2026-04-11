@@ -7,6 +7,8 @@ game:
   max-players: 20
   countdown-seconds: 30
   initial-pvp-grace-seconds: 45
+  show-player-locator-bar: true
+  give-initial-compass: true
   hide-name-tags: true
   disable-advancement-announcements: true
   restrict-block-modification-outside-border: true

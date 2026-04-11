@@ -1,12 +1,17 @@
 package me.shirasemaru.mineroyale12111.service.player
 
+import me.shirasemaru.mineroyale12111.config.ConfigManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 
-class PlayerSetupService {
+class PlayerSetupService(
+    private val configManager: ConfigManager
+) {
 
     fun preparePlayerForLobby(player: Player) {
         player.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
@@ -24,6 +29,9 @@ class PlayerSetupService {
         spawnMap.forEach { (player, location) ->
             resetPlayerState(player)
             player.gameMode = GameMode.SURVIVAL
+            if (configManager.gameSettings.giveInitialCompass) {
+                player.inventory.addItem(ItemStack(Material.COMPASS))
+            }
             player.teleport(location)
         }
     }
