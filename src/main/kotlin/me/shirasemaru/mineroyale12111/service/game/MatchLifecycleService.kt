@@ -9,7 +9,7 @@ import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
-import org.bukkit.GameRule
+import org.bukkit.GameRules
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
@@ -97,15 +97,15 @@ class MatchLifecycleService(
         }
 
         val world = configManager.gameWorld
-        originalAnnounceAdvancements = world.getGameRuleValue(GameRule.ANNOUNCE_ADVANCEMENTS)
-        world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false)
+        originalAnnounceAdvancements = world.getGameRuleValue(GameRules.SHOW_ADVANCEMENT_MESSAGES)
+        world.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false)
     }
 
     private fun restoreMatchRules() {
         scoreboardManager.setNameTagsHidden(false)
 
         val original = originalAnnounceAdvancements ?: return
-        configManager.gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, original)
+        configManager.gameWorld.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, original)
         originalAnnounceAdvancements = null
     }
 
