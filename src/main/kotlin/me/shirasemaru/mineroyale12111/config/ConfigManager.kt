@@ -47,6 +47,7 @@ class ConfigManager(private val plugin: JavaPlugin) {
             countdownSeconds = config.getInt("game.countdown-seconds", 30),
             initialPvpGraceSeconds = config.getInt("game.initial-pvp-grace-seconds", 45),
             showPlayerLocatorBar = config.getBoolean("game.show-player-locator-bar", true),
+            playerLocatorMaxAlivePlayers = config.getInt("game.player-locator-max-alive-players", 4),
             giveInitialCompass = config.getBoolean("game.give-initial-compass", true),
             hideNameTags = config.getBoolean("game.hide-name-tags", false),
             disableAdvancementAnnouncements = config.getBoolean("game.disable-advancement-announcements", false),

@@ -21,8 +21,9 @@ class CompassTrackingService(
 
         task = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
             val alivePlayers = aliveProvider()
+            val maxAlivePlayers = configManager.gameSettings.playerLocatorMaxAlivePlayers
 
-            if (alivePlayers.size > 4) return@Runnable
+            if (alivePlayers.size > maxAlivePlayers) return@Runnable
             if (alivePlayers.size <= 1) return@Runnable
 
             alivePlayers.forEach { player ->

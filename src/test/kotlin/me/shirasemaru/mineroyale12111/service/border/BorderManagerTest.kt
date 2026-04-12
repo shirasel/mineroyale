@@ -131,6 +131,7 @@ class BorderManagerTest {
             countdownSeconds = 30,
             initialPvpGraceSeconds = 3,
             showPlayerLocatorBar = true,
+            playerLocatorMaxAlivePlayers = 4,
             giveInitialCompass = true,
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
