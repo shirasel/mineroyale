@@ -9,7 +9,7 @@ import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
-import org.bukkit.GameRules
+import org.bukkit.GameRule
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
@@ -29,6 +29,7 @@ class MatchLifecycleService(
 
     private var scoreboardTask: BukkitTask? = null
     private var originalAnnounceAdvancements: Boolean? = null
+    private var originalLocatorBar: Boolean? = null
 
     fun getEligiblePlayers(): List<Player> =
         Bukkit.getOnlinePlayers()
@@ -90,23 +91,38 @@ class MatchLifecycleService(
 
     private fun applyMatchRules() {
         scoreboardManager.setNameTagsHidden(configManager.gameSettings.hideNameTags)
+        val world = configManager.gameWorld
+        locatorBarRule()?.let { locatorBarRule ->
+            originalLocatorBar = world.getGameRuleValue(locatorBarRule)
+            world.setGameRule(locatorBarRule, configManager.gameSettings.showPlayerLocatorBar)
+        }
 
         if (!configManager.gameSettings.disableAdvancementAnnouncements) {
             originalAnnounceAdvancements = null
             return
         }
 
-        val world = configManager.gameWorld
-        originalAnnounceAdvancements = world.getGameRuleValue(GameRules.SHOW_ADVANCEMENT_MESSAGES)
-        world.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false)
+        showAdvancementMessagesRule()?.let { rule ->
+            originalAnnounceAdvancements = world.getGameRuleValue(rule)
+            world.setGameRule(rule, false)
+        }
     }
 
     private fun restoreMatchRules() {
         scoreboardManager.setNameTagsHidden(false)
+        originalLocatorBar?.let {
+            locatorBarRule()?.let { locatorBarRule ->
+                configManager.gameWorld.setGameRule(locatorBarRule, it)
+            }
+            originalLocatorBar = null
+        }
 
-        val original = originalAnnounceAdvancements ?: return
-        configManager.gameWorld.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, original)
-        originalAnnounceAdvancements = null
+        originalAnnounceAdvancements?.let {
+            showAdvancementMessagesRule()?.let { rule ->
+                configManager.gameWorld.setGameRule(rule, it)
+            }
+            originalAnnounceAdvancements = null
+        }
     }
 
     private fun startScoreboardTask(session: GameSession) {
@@ -124,4 +140,20 @@ class MatchLifecycleService(
         scoreboardTask?.cancel()
         scoreboardTask = null
     }
+
+    private fun locatorBarRule(): GameRule<Boolean>? =
+        runCatching {
+            @Suppress("UNCHECKED_CAST")
+            Class.forName("org.bukkit.GameRules")
+                .getField("LOCATOR_BAR")
+                .get(null) as GameRule<Boolean>
+        }.getOrNull()
+
+    private fun showAdvancementMessagesRule(): GameRule<Boolean>? =
+        runCatching {
+            @Suppress("UNCHECKED_CAST")
+            Class.forName("org.bukkit.GameRules")
+                .getField("SHOW_ADVANCEMENT_MESSAGES")
+                .get(null) as GameRule<Boolean>
+        }.getOrNull()
 }

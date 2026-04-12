@@ -234,6 +234,7 @@ class MatchLifecycleServiceTest {
         every { configManager.gameWorld } returns world
         every { configManager.gameSettings } returns gameSettings
         every { gameSettings.hideNameTags } returns false
+        every { gameSettings.showPlayerLocatorBar } returns true
         every { gameSettings.disableAdvancementAnnouncements } returns false
         return configManager
     }

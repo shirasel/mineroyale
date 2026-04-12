@@ -17,46 +17,57 @@ class MessageService {
 
     fun sendPlayersOnlyCommandMessage(sender: CommandSender) {
         sender.sendMessage("このコマンドはプレイヤーのみ実行できます。")
+        playWarningSound(sender)
     }
 
     fun sendNoPermissionMessage(sender: CommandSender) {
         sender.sendMessage("§cこのコマンドを実行する権限がありません。")
+        playWarningSound(sender)
     }
 
     fun sendCommandUsageMessage(sender: CommandSender) {
         sender.sendMessage("§e使用方法: /mr <start|stop|reload>")
+        playInfoSound(sender)
     }
 
     fun sendCannotStartMessage(sender: CommandSender) {
         sender.sendMessage("§c現在は新しいゲームを開始できません。")
+        playWarningSound(sender)
     }
 
     fun broadcastCountdownStartRequested() {
         Bukkit.broadcast(Component.text("カウントダウンを開始します。", NamedTextColor.GREEN))
+        playStartSound(Bukkit.getOnlinePlayers())
     }
 
     fun sendCannotStopMessage(sender: CommandSender) {
         sender.sendMessage("§c停止できるゲームがありません。")
+        playWarningSound(sender)
     }
 
     fun sendConfigReloadedMessage(sender: CommandSender) {
         sender.sendMessage("設定を再読み込みしました。")
+        playInfoSound(sender)
     }
 
     fun sendUnknownSubcommandMessage(sender: CommandSender) {
         sender.sendMessage("§c不明なサブコマンドです。")
+        playWarningSound(sender)
     }
 
     fun broadcastNotEnoughPlayersToStart() {
         Bukkit.broadcast(Component.text("参加人数が不足しているため開始できません。"))
+        playWarningSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastTooManyPlayers(maxPlayers: Int) {
         Bukkit.broadcast(Component.text("最大参加人数は ${maxPlayers} 人です。"))
+        playWarningSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastGameStopped() {
         Bukkit.broadcast(Component.text("ゲームを停止しました。"))
+        playInfoSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastCountdown(time: Int, players: List<Player>) {
@@ -67,11 +78,13 @@ class MessageService {
     }
 
     fun broadcastCountdownCancelled() {
-        Bukkit.broadcast(Component.text("人数不足のためカウントダウンを中止しました。"))
+        Bukkit.broadcast(Component.text("参加人数不足のためカウントダウンを中止しました。"))
+        playWarningSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastGameStarting() {
         Bukkit.broadcast(Component.text("ゲームを開始します。"))
+        playStartSound(Bukkit.getOnlinePlayers())
     }
 
     fun logMatchStarted(logger: Logger) {
@@ -79,27 +92,33 @@ class MessageService {
     }
 
     fun broadcastNoWinner() {
-        Bukkit.broadcast(Component.text("ゲーム終了。勝者は決まりませんでした。"))
+        Bukkit.broadcast(Component.text("ゲーム終了。勝者はいませんでした。"))
+        playInfoSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastPlayerEliminated(playerName: String, aliveCount: Int) {
         Bukkit.broadcast(Component.text("$playerName が脱落しました。残り $aliveCount 人"))
+        playAlertSound(Bukkit.getOnlinePlayers())
     }
 
     fun sendLateJoinSpectatorMessage(player: Player) {
         player.sendMessage("現在ゲーム進行中のため、観戦モードで参加しました。")
+        playInfoSound(player)
     }
 
     fun sendLobbyWaitingMessage(player: Player) {
         player.sendMessage("ゲーム待機中です。開始をお待ちください。")
+        playInfoSound(player)
     }
 
     fun sendSpectatorTargetChanged(player: Player, targetName: String) {
         player.sendMessage("観戦対象を $targetName に切り替えました。")
+        playInfoSound(player)
     }
 
     fun broadcastPvpGracePeriod(seconds: Int) {
         Bukkit.broadcast(Component.text("PvP は ${seconds} 秒後に有効になります。"))
+        playAlertSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastPvpEnabled(players: Iterable<Player>) {
@@ -113,19 +132,28 @@ class MessageService {
         Bukkit.broadcast(Component.text("========== フェーズ $phaseNumber =========="))
 
         if (waitSeconds > 0) {
-            Bukkit.broadcast(Component.text("${waitSeconds} 秒後に縮小が始まります。"))
+            Bukkit.broadcast(Component.text("${waitSeconds} 秒後にエリア収縮が始まります。"))
         }
 
-        Bukkit.broadcast(Component.text("ボーダーは ${targetSize} まで縮小します。"))
-        Bukkit.broadcast(Component.text("縮小時間: ${durationSeconds} 秒"))
+        Bukkit.broadcast(Component.text("ボーダーは ${targetSize} まで収縮します。"))
+        Bukkit.broadcast(Component.text("収縮時間: ${durationSeconds} 秒"))
+        playAlertSound(Bukkit.getOnlinePlayers())
+    }
+
+    fun broadcastBorderShrinkStarted(phaseNumber: Int, targetSize: Double, durationSeconds: Int) {
+        Bukkit.broadcast(Component.text("フェーズ $phaseNumber のエリア収縮が開始しました。"))
+        Bukkit.broadcast(Component.text("ボーダーは ${targetSize} まで ${durationSeconds} 秒で収縮します。"))
+        playAlertSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastFinalMoveStarted() {
-        Bukkit.broadcast(Component.text("最終フェーズが移動を開始しました。"))
+        Bukkit.broadcast(Component.text("最終フェーズの移動を開始しました。"))
+        playAlertSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastVictory(winnerName: String) {
         Bukkit.broadcast(Component.text("${winnerName} が勝利しました。"))
+        playVictorySound(Bukkit.getOnlinePlayers())
     }
 
     fun victoryTitle(winnerName: String): Title =
@@ -138,4 +166,50 @@ class MessageService {
                 Duration.ofMillis(1000)
             )
         )
+
+    private fun playWarningSound(sender: CommandSender) {
+        if (sender is Player) {
+            playWarningSound(sender)
+        }
+    }
+
+    private fun playInfoSound(sender: CommandSender) {
+        if (sender is Player) {
+            playInfoSound(sender)
+        }
+    }
+
+    private fun playWarningSound(player: Player) {
+        player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 0.8f)
+    }
+
+    private fun playInfoSound(player: Player) {
+        player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.05f)
+    }
+
+    private fun playInfoSound(players: Iterable<Player>) {
+        players.forEach(::playInfoSound)
+    }
+
+    private fun playWarningSound(players: Iterable<Player>) {
+        players.forEach(::playWarningSound)
+    }
+
+    private fun playStartSound(players: Iterable<Player>) {
+        players.forEach {
+            it.playSound(it.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.2f)
+        }
+    }
+
+    private fun playAlertSound(players: Iterable<Player>) {
+        players.forEach {
+            it.playSound(it.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.9f, 1.35f)
+        }
+    }
+
+    private fun playVictorySound(players: Iterable<Player>) {
+        players.forEach {
+            it.playSound(it.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.6f)
+        }
+    }
 }

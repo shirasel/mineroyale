@@ -155,6 +155,7 @@ class BorderService(
     ) {
         val phase = phases[index]
         session.phaseState = PhaseState.SHRINKING.displayName
+        messageService.broadcastBorderShrinkStarted(index + 1, phase.targetSize, phase.durationSeconds)
         startPhaseCountdown(session, phase.durationSeconds)
 
         startShrink(session, border, border.size, phase.targetSize, phase.durationSeconds.toLong()) {
