@@ -29,6 +29,7 @@ class PlayerSetupService(
         spawnMap.forEach { (player, location) ->
             resetPlayerState(player)
             player.gameMode = GameMode.SURVIVAL
+            player.inventory.addItem(ItemStack(Material.OAK_PLANKS, 64))
             if (configManager.gameSettings.giveInitialCompass) {
                 player.inventory.addItem(ItemStack(Material.COMPASS))
             }
