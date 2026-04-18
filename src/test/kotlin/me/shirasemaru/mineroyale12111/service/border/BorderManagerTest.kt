@@ -133,6 +133,10 @@ class BorderManagerTest {
             showPlayerLocatorBar = true,
             playerLocatorMaxAlivePlayers = 4,
             giveInitialCompass = true,
+            giveEndCrystal = true,
+            endCrystalGlowSeconds = 15,
+            endCrystalItemName = "発光の岩",
+            endCrystalItemDescription = "使用すると%seconds%秒間自分以外の生存者1名をランダムで発光させます。",
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
             restrictBlockModificationOutsideBorder = false

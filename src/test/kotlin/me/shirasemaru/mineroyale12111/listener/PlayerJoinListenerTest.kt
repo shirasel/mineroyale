@@ -21,6 +21,7 @@ import me.shirasemaru.mineroyale12111.game.GameState
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
+import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.player.SpectatorService
@@ -110,9 +111,11 @@ class PlayerJoinListenerTest {
         val scoreboardManager = mockk<ScoreboardManager>(relaxed = true)
         val victoryService = mockk<VictoryService>(relaxed = true)
         val compassTrackingService = mockk<CompassTrackingService>(relaxed = true)
+        val endCrystalService = mockk<EndCrystalService>(relaxed = true)
         val world = mockk<World>()
         val border = mockk<WorldBorder>(relaxed = true)
 
+        every { plugin.namespace() } returns "mineroyale12111"
         every { configManager.gameWorld } returns world
         every { configManager.gameSettings } returns GameSettings(
             minPlayers = 2,
@@ -122,6 +125,10 @@ class PlayerJoinListenerTest {
             showPlayerLocatorBar = true,
             playerLocatorMaxAlivePlayers = 4,
             giveInitialCompass = true,
+            giveEndCrystal = true,
+            endCrystalGlowSeconds = 15,
+            endCrystalItemName = "発光の岩",
+            endCrystalItemDescription = "使用すると%seconds%秒間自分以外の生存者1名をランダムで発光させます。",
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
             restrictBlockModificationOutsideBorder = false
@@ -157,7 +164,8 @@ class PlayerJoinListenerTest {
             messageService = messageService,
             scoreboardManager = scoreboardManager,
             victoryService = victoryService,
-            compassTrackingService = compassTrackingService
+            compassTrackingService = compassTrackingService,
+            endCrystalService = endCrystalService
         )
 
         return Fixture(

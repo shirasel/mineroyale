@@ -12,6 +12,7 @@ import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
+import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.player.SpectatorService
@@ -105,7 +106,9 @@ class GameManagerDeathFlowTest {
         val scoreboardManager = mockk<ScoreboardManager>()
         val victoryService = mockk<VictoryService>()
         val compassTrackingService = mockk<CompassTrackingService>()
+        val endCrystalService = mockk<EndCrystalService>(relaxed = true)
 
+        every { plugin.namespace() } returns "mineroyale12111"
         every { configManager.gameWorld } returns world
         every { world.worldBorder } returns border
         every { countdownService.cancel(any()) } just runs
@@ -131,7 +134,8 @@ class GameManagerDeathFlowTest {
             messageService = messageService,
             scoreboardManager = scoreboardManager,
             victoryService = victoryService,
-            compassTrackingService = compassTrackingService
+            compassTrackingService = compassTrackingService,
+            endCrystalService = endCrystalService
         )
 
         return Fixture(

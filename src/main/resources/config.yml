@@ -10,6 +10,10 @@ game:
   show-player-locator-bar: true
   player-locator-max-alive-players: 4
   give-initial-compass: true
+  give-end-crystal: true
+  end-crystal-glow-seconds: 15
+  end-crystal-item-name: "発光の岩"
+  end-crystal-item-description: "使用すると%seconds%秒間自分以外の生存者1名をランダムで発光させます。"
   hide-name-tags: true
   disable-advancement-announcements: true
   restrict-block-modification-outside-border: true

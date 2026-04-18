@@ -8,6 +8,7 @@ import me.shirasemaru.mineroyale12111.service.game.MatchFlowService
 import me.shirasemaru.mineroyale12111.service.game.MatchLifecycleService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
+import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.player.SpectatorService
@@ -27,7 +28,8 @@ class GameManager(
     private val messageService: MessageService,
     scoreboardManager: ScoreboardManager,
     victoryService: VictoryService,
-    compassTrackingService: CompassTrackingService
+    compassTrackingService: CompassTrackingService,
+    private val endCrystalService: EndCrystalService = EndCrystalService(plugin, configManager, messageService)
 ) {
 
     private val session = GameSession()
@@ -118,6 +120,7 @@ class GameManager(
                 matchLifecycleService.startMatch(session, players) {
                     endGame(null)
                 }
+                endCrystalService.distribute(players)
             }
         )
     }
@@ -186,4 +189,10 @@ class GameManager(
 
     fun extractSpectatorTargetName(item: ItemStack): String? =
         spectatorService.extractSpectateTarget(item)
+
+    fun isEndCrystal(item: ItemStack): Boolean =
+        endCrystalService.isEndCrystal(item)
+
+    fun useEndCrystal(player: Player): Boolean =
+        endCrystalService.use(player, playerRegistry.getAlivePlayers())
 }

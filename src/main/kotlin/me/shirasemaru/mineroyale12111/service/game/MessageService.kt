@@ -116,6 +116,26 @@ class MessageService {
         playInfoSound(player)
     }
 
+    fun sendEndCrystalReceived(player: Player) {
+        player.sendMessage("エンドクリスタルを受け取りました。右クリックで使用できます。")
+        playInfoSound(player)
+    }
+
+    fun sendEndCrystalNoTarget(player: Player) {
+        player.sendMessage("発光させる対象がいません。")
+        playWarningSound(player)
+    }
+
+    fun sendEndCrystalUsed(player: Player, targetName: String, seconds: Int) {
+        player.sendMessage("$targetName を ${seconds} 秒間発光させました。")
+        playAlertSound(listOf(player))
+    }
+
+    fun sendEndCrystalMarked(player: Player, seconds: Int) {
+        player.sendMessage("エンドクリスタルの効果で ${seconds} 秒間発光状態になりました。")
+        playAlertSound(listOf(player))
+    }
+
     fun broadcastPvpGracePeriod(seconds: Int) {
         Bukkit.broadcast(Component.text("PvP は ${seconds} 秒後に有効になります。"))
         playAlertSound(Bukkit.getOnlinePlayers())

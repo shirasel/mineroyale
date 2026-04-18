@@ -20,6 +20,7 @@ import me.shirasemaru.mineroyale12111.config.WorldSettings
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
+import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.player.SpectatorService
@@ -34,6 +35,7 @@ import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
+import org.bukkit.inventory.PlayerInventory
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
@@ -120,9 +122,11 @@ class GameManagerStartFlowTest {
         val scoreboardManager = mockk<ScoreboardManager>()
         val victoryService = mockk<VictoryService>(relaxed = true)
         val compassTrackingService = mockk<CompassTrackingService>()
+        val endCrystalService = mockk<EndCrystalService>(relaxed = true)
 
         every { plugin.server } returns server
         every { plugin.logger } returns Logger.getLogger("test")
+        every { plugin.namespace() } returns "mineroyale12111"
         every { server.scheduler } returns scheduler
         every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), any<Long>(), any<Long>()) } returns scoreboardTask
         every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk(relaxed = true)
@@ -134,6 +138,10 @@ class GameManagerStartFlowTest {
             showPlayerLocatorBar = true,
             playerLocatorMaxAlivePlayers = 4,
             giveInitialCompass = true,
+            giveEndCrystal = true,
+            endCrystalGlowSeconds = 15,
+            endCrystalItemName = "発光の岩",
+            endCrystalItemDescription = "使用すると%seconds%秒間自分以外の生存者1名をランダムで発光させます。",
             hideNameTags = false,
             disableAdvancementAnnouncements = false,
             restrictBlockModificationOutsideBorder = false
@@ -175,7 +183,8 @@ class GameManagerStartFlowTest {
             messageService = messageService,
             scoreboardManager = scoreboardManager,
             victoryService = victoryService,
-            compassTrackingService = compassTrackingService
+            compassTrackingService = compassTrackingService,
+            endCrystalService = endCrystalService
         )
 
         return StartFlowFixture(
@@ -223,11 +232,13 @@ class GameManagerStartFlowTest {
     }
 
     private fun mockPlayer(name: String): Player {
+        val inventory = mockk<PlayerInventory>(relaxed = true)
         val player = mockk<Player>()
         every { player.name } returns name
         every { player.uniqueId } returns UUID.nameUUIDFromBytes(name.toByteArray())
         every { player.gameMode } returns GameMode.SURVIVAL
         every { player.isOnline } returns true
+        every { player.inventory } returns inventory
         return player
     }
 

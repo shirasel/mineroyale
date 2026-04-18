@@ -49,6 +49,13 @@ class ConfigManager(private val plugin: JavaPlugin) {
             showPlayerLocatorBar = config.getBoolean("game.show-player-locator-bar", true),
             playerLocatorMaxAlivePlayers = config.getInt("game.player-locator-max-alive-players", 4),
             giveInitialCompass = config.getBoolean("game.give-initial-compass", true),
+            giveEndCrystal = config.getBoolean("game.give-end-crystal", true),
+            endCrystalGlowSeconds = config.getInt("game.end-crystal-glow-seconds", 15).coerceAtLeast(1),
+            endCrystalItemName = config.getString("game.end-crystal-item-name", "発光の岩")!!,
+            endCrystalItemDescription = config.getString(
+                "game.end-crystal-item-description",
+                "使用すると%seconds%秒間自分以外の生存者1名をランダムで発光させます。"
+            )!!,
             hideNameTags = config.getBoolean("game.hide-name-tags", false),
             disableAdvancementAnnouncements = config.getBoolean("game.disable-advancement-announcements", false),
             restrictBlockModificationOutsideBorder = config.getBoolean("game.restrict-block-modification-outside-border", false)

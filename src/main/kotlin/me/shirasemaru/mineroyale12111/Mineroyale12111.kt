@@ -2,6 +2,7 @@ package me.shirasemaru.mineroyale12111
 
 import me.shirasemaru.mineroyale12111.command.MrCommand
 import me.shirasemaru.mineroyale12111.config.ConfigManager
+import me.shirasemaru.mineroyale12111.listener.EndCrystalListener
 import me.shirasemaru.mineroyale12111.game.GameManager
 import me.shirasemaru.mineroyale12111.listener.GameListener
 import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
@@ -48,6 +49,7 @@ class Mineroyale12111 : JavaPlugin() {
         server.pluginManager.registerEvents(HealthRegainListener(gameManager), this)
         server.pluginManager.registerEvents(GameListener(this, configManager, gameManager), this)
         server.pluginManager.registerEvents(SpectatorListener(gameManager), this)
+        server.pluginManager.registerEvents(EndCrystalListener(gameManager), this)
 
         val mrCommand = MrCommand(gameManager, messageService)
         getCommand("mr")?.setExecutor(mrCommand)
