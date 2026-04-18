@@ -1,9 +1,10 @@
 package me.shirasemaru.mineroyale12111
 
 import me.shirasemaru.mineroyale12111.command.MrCommand
+import me.shirasemaru.mineroyale12111.command.SpecCommand
 import me.shirasemaru.mineroyale12111.config.ConfigManager
-import me.shirasemaru.mineroyale12111.listener.EndCrystalListener
 import me.shirasemaru.mineroyale12111.game.GameManager
+import me.shirasemaru.mineroyale12111.listener.EndCrystalListener
 import me.shirasemaru.mineroyale12111.listener.GameListener
 import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
 import me.shirasemaru.mineroyale12111.listener.PlayerJoinListener
@@ -54,6 +55,7 @@ class Mineroyale12111 : JavaPlugin() {
         val mrCommand = MrCommand(gameManager, messageService)
         getCommand("mr")?.setExecutor(mrCommand)
         getCommand("mr")?.setTabCompleter(mrCommand)
+        getCommand("spec")?.setExecutor(SpecCommand(gameManager, messageService))
 
         logger.info("Mineroyale12111 を有効化しました。")
     }

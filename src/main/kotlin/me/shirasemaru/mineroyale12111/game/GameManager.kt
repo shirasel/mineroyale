@@ -179,6 +179,18 @@ class GameManager(
 
     fun isSpectator(player: Player): Boolean = playerRegistry.isSpectator(player)
 
+    fun reapplySpectatorMode(player: Player) {
+        spectatorService.applySpectatorMode(player)
+    }
+
+    fun openSpectatorMenu(player: Player) {
+        spectatorService.openTeleportMenu(
+            spectator = player,
+            alivePlayers = playerRegistry.getAlivePlayers(),
+            displayNameProvider = messageService::spectatorHeadDisplayName
+        )
+    }
+
     fun isOutsideCurrentBorder(location: Location): Boolean =
         borderManager.isOutsideBorder(location)
 
@@ -189,6 +201,12 @@ class GameManager(
 
     fun extractSpectatorTargetName(item: ItemStack): String? =
         spectatorService.extractSpectateTarget(item)
+
+    fun isSpectatorNavigator(item: ItemStack): Boolean =
+        spectatorService.isNavigatorRod(item)
+
+    fun isSpectatorMenu(title: String): Boolean =
+        spectatorService.isSpectatorMenu(title)
 
     fun isEndCrystal(item: ItemStack): Boolean =
         endCrystalService.isEndCrystal(item)

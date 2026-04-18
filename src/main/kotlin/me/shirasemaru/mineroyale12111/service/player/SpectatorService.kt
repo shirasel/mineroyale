@@ -1,18 +1,24 @@
 package me.shirasemaru.mineroyale12111.service.player
 
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.entity.Player
+import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
 
 class SpectatorService {
 
+    private val navigatorTitle = "観戦先選択"
+
     fun applySpectatorMode(player: Player) {
         player.gameMode = GameMode.SPECTATOR
         player.inventory.clear()
+        player.inventory.setItem(0, createNavigatorRod())
     }
 
     fun refreshTargets(
@@ -21,12 +27,29 @@ class SpectatorService {
         displayNameProvider: (String) -> Component
     ) {
         spectators.forEach { spectator ->
-            spectator.inventory.clear()
+            spectator.inventory.setItem(0, createNavigatorRod())
 
-            alivePlayers.forEachIndexed { index, alivePlayer ->
-                spectator.inventory.setItem(index, createPlayerHead(alivePlayer, displayNameProvider))
+            if (isSpectatorMenu(spectator.openInventory.title)) {
+                openTeleportMenu(spectator, alivePlayers, displayNameProvider)
             }
         }
+    }
+
+    fun openTeleportMenu(
+        spectator: Player,
+        alivePlayers: Collection<Player>,
+        displayNameProvider: (String) -> Component
+    ) {
+        val size = ((alivePlayers.size.coerceAtLeast(1) - 1) / 9 + 1).coerceAtMost(6) * 9
+        val inventory = Bukkit.createInventory(null, size, navigatorTitle)
+
+        alivePlayers.forEachIndexed { index, alivePlayer ->
+            if (index < size) {
+                inventory.setItem(index, createPlayerHead(alivePlayer, displayNameProvider))
+            }
+        }
+
+        spectator.openInventory(inventory)
     }
 
     fun teleportSpectatorToTarget(spectator: Player, target: Player) {
@@ -37,6 +60,20 @@ class SpectatorService {
     fun extractSpectateTarget(item: ItemStack): String? {
         val meta = item.itemMeta as? SkullMeta ?: return null
         return meta.owningPlayer?.name
+    }
+
+    fun isNavigatorRod(item: ItemStack?): Boolean =
+        item != null && item.type == Material.BLAZE_ROD
+
+    fun isSpectatorMenu(title: String): Boolean = title == navigatorTitle
+
+    private fun createNavigatorRod(): ItemStack {
+        val item = ItemStack(Material.BLAZE_ROD)
+        val meta = item.itemMeta
+        meta.displayName(Component.text("観戦メニュー", NamedTextColor.GOLD))
+        meta.lore(listOf(Component.text("右クリックで観戦先一覧を開く", NamedTextColor.GRAY)))
+        item.itemMeta = meta
+        return item
     }
 
     private fun createPlayerHead(

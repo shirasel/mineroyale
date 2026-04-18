@@ -8,7 +8,6 @@ import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
-import org.bukkit.GameMode
 import org.bukkit.GameRule
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -33,7 +32,7 @@ class MatchLifecycleService(
 
     fun getEligiblePlayers(): List<Player> =
         Bukkit.getOnlinePlayers()
-            .filter { it.gameMode != GameMode.SPECTATOR }
+            .filter { !playerRegistry.isSpectator(it) }
             .sortedBy { it.name }
 
     fun startMatch(session: GameSession, players: List<Player>, onMatchComplete: () -> Unit) {

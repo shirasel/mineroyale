@@ -1,7 +1,6 @@
 package me.shirasemaru.mineroyale12111.service.game
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.title.Title
 import org.bukkit.Bukkit
 import org.bukkit.Sound
@@ -16,32 +15,32 @@ class MessageService {
         Component.text("$targetName を観戦")
 
     fun sendPlayersOnlyCommandMessage(sender: CommandSender) {
-        sender.sendMessage("このコマンドはプレイヤーのみ実行できます。")
+        sender.sendMessage("このコマンドはプレイヤーのみ使用できます。")
         playWarningSound(sender)
     }
 
     fun sendNoPermissionMessage(sender: CommandSender) {
-        sender.sendMessage("§cこのコマンドを実行する権限がありません。")
+        sender.sendMessage("このコマンドを使用する権限がありません。")
         playWarningSound(sender)
     }
 
     fun sendCommandUsageMessage(sender: CommandSender) {
-        sender.sendMessage("§e使用方法: /mr <start|stop|reload>")
+        sender.sendMessage("使用方法: /mr <start|stop|reload>")
         playInfoSound(sender)
     }
 
     fun sendCannotStartMessage(sender: CommandSender) {
-        sender.sendMessage("§c現在は新しいゲームを開始できません。")
+        sender.sendMessage("現在は新しいゲームを開始できません。")
         playWarningSound(sender)
     }
 
     fun broadcastCountdownStartRequested() {
-        Bukkit.broadcast(Component.text("カウントダウンを開始します。", NamedTextColor.GREEN))
+        Bukkit.broadcast(Component.text("カウントダウンを開始します。"))
         playStartSound(Bukkit.getOnlinePlayers())
     }
 
     fun sendCannotStopMessage(sender: CommandSender) {
-        sender.sendMessage("§c停止できるゲームがありません。")
+        sender.sendMessage("停止できるゲームがありません。")
         playWarningSound(sender)
     }
 
@@ -51,7 +50,7 @@ class MessageService {
     }
 
     fun sendUnknownSubcommandMessage(sender: CommandSender) {
-        sender.sendMessage("§c不明なサブコマンドです。")
+        sender.sendMessage("不明なサブコマンドです。")
         playWarningSound(sender)
     }
 
@@ -66,7 +65,7 @@ class MessageService {
     }
 
     fun broadcastGameStopped() {
-        Bukkit.broadcast(Component.text("ゲームを停止しました。"))
+        Bukkit.broadcast(Component.text("ゲームを終了しました。"))
         playInfoSound(Bukkit.getOnlinePlayers())
     }
 
@@ -116,6 +115,11 @@ class MessageService {
         playInfoSound(player)
     }
 
+    fun sendSpectatorOnlyCommandMessage(player: Player) {
+        player.sendMessage("このコマンドは観戦者のみ使用できます。")
+        playWarningSound(player)
+    }
+
     fun sendEndCrystalReceived(player: Player) {
         player.sendMessage("エンドクリスタルを受け取りました。右クリックで使用できます。")
         playInfoSound(player)
@@ -161,7 +165,7 @@ class MessageService {
     }
 
     fun broadcastBorderShrinkStarted(phaseNumber: Int, targetSize: Double, durationSeconds: Int) {
-        Bukkit.broadcast(Component.text("フェーズ $phaseNumber のエリア収縮が開始しました。"))
+        Bukkit.broadcast(Component.text("フェーズ $phaseNumber のエリア収縮が始まりました。"))
         Bukkit.broadcast(Component.text("ボーダーは ${targetSize} まで ${durationSeconds} 秒で収縮します。"))
         playAlertSound(Bukkit.getOnlinePlayers())
     }

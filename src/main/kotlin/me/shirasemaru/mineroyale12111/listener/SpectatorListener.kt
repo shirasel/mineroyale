@@ -2,11 +2,11 @@ package me.shirasemaru.mineroyale12111.listener
 
 import me.shirasemaru.mineroyale12111.game.GameManager
 import org.bukkit.Bukkit
-import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerInteractEvent
 
 class SpectatorListener(
@@ -18,12 +18,29 @@ class SpectatorListener(
         val player = event.player
 
         if (!gameManager.isRunning()) return
-        if (player.gameMode != GameMode.SPECTATOR) return
+        if (!gameManager.isSpectator(player)) return
         if (event.action != Action.RIGHT_CLICK_AIR &&
             event.action != Action.RIGHT_CLICK_BLOCK
         ) return
 
         val item = event.item ?: return
+        if (!gameManager.isSpectatorNavigator(item)) return
+
+        event.isCancelled = true
+        gameManager.openSpectatorMenu(player)
+    }
+
+    @EventHandler
+    fun onInventoryClick(event: InventoryClickEvent) {
+        val player = event.whoClicked as? org.bukkit.entity.Player ?: return
+
+        if (!gameManager.isRunning()) return
+        if (!gameManager.isSpectator(player)) return
+        if (!gameManager.isSpectatorMenu(event.view.title)) return
+
+        event.isCancelled = true
+
+        val item = event.currentItem ?: return
         if (item.type != Material.PLAYER_HEAD) return
 
         val targetName = gameManager.extractSpectatorTargetName(item) ?: return

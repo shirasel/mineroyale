@@ -68,6 +68,11 @@ class GameListener(
 
         if (attacker == null) return
 
+        if (gameManager.isSpectator(victim) || gameManager.isSpectator(attacker)) {
+            event.isCancelled = true
+            return
+        }
+
         if (!gameManager.isPvpEnabled()) {
             event.isCancelled = true
         }
@@ -98,6 +103,7 @@ class GameListener(
 
         if (gameManager.isSpectator(player)) {
             player.gameMode = GameMode.SPECTATOR
+            gameManager.reapplySpectatorMode(player)
         }
     }
 

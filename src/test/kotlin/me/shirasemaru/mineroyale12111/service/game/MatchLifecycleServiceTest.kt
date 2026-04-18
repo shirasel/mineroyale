@@ -39,12 +39,16 @@ class MatchLifecycleServiceTest {
     fun `getEligiblePlayers filters out spectators and sorts by name`() {
         mockkStatic(Bukkit::class)
         val activeB = mockPlayer("bravo", GameMode.SURVIVAL)
-        val spectator = mockPlayer("charlie", GameMode.SPECTATOR)
+        val spectator = mockPlayer("charlie", GameMode.ADVENTURE)
         val activeA = mockPlayer("alpha", GameMode.ADVENTURE)
+        val playerRegistry = mockk<PlayerRegistry>()
 
         every { Bukkit.getOnlinePlayers() } returns linkedSetOf(activeB, spectator, activeA)
+        every { playerRegistry.isSpectator(spectator) } returns true
+        every { playerRegistry.isSpectator(activeA) } returns false
+        every { playerRegistry.isSpectator(activeB) } returns false
 
-        val service = createService()
+        val service = createService(playerRegistry)
 
         val result = service.getEligiblePlayers()
 
@@ -213,12 +217,12 @@ class MatchLifecycleServiceTest {
         verify { playerRegistry.clear() }
     }
 
-    private fun createService(): MatchLifecycleService =
+    private fun createService(playerRegistry: PlayerRegistry = mockk()): MatchLifecycleService =
         MatchLifecycleService(
             plugin = mockPlugin(),
             configManager = mockConfigManager(),
             scoreboardManager = mockk(),
-            playerRegistry = mockk(),
+            playerRegistry = playerRegistry,
             playerSetupService = mockk(),
             borderManager = mockk(),
             compassTrackingService = mockk(),

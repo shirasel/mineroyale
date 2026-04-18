@@ -111,6 +111,8 @@ class GameListenerTest {
         val event = mockDamageEvent(attacker, victim)
 
         every { gameManager.isRunning() } returns true
+        every { gameManager.isSpectator(victim) } returns false
+        every { gameManager.isSpectator(attacker) } returns false
         every { gameManager.isPvpEnabled() } returns false
 
         listener.onDamage(event)
@@ -135,6 +137,26 @@ class GameListenerTest {
         listener.onDamage(event)
 
         assertFalse(event.isCancelled())
+        verify(exactly = 0) { gameManager.isPvpEnabled() }
+    }
+
+    @Test
+    fun `onDamage cancels when attacker or victim is spectator`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val attacker = mockPlayer()
+        val victim = mockPlayer()
+        val event = mockDamageEvent(attacker, victim)
+
+        every { gameManager.isRunning() } returns true
+        every { gameManager.isSpectator(victim) } returns false
+        every { gameManager.isSpectator(attacker) } returns true
+
+        listener.onDamage(event)
+
+        assertTrue(event.isCancelled())
         verify(exactly = 0) { gameManager.isPvpEnabled() }
     }
 
@@ -191,6 +213,7 @@ class GameListenerTest {
         every { player.uniqueId } returns java.util.UUID.randomUUID()
         every { player.location } returns deathLocation
         every { gameManager.isSpectator(player) } returns true
+        every { gameManager.reapplySpectatorMode(player) } returns Unit
 
         mockkStatic(Bukkit::class)
         val scheduler = mockk<BukkitScheduler>()
@@ -205,7 +228,7 @@ class GameListenerTest {
         listener.onRespawn(respawnEvent)
 
         assertEquals(deathLocation, respawnEvent.respawnLocation)
-        assertEquals(GameMode.SPECTATOR, player.gameMode)
+        verify(exactly = 1) { gameManager.reapplySpectatorMode(player) }
     }
 
     private fun mockPlayer(): Player {
