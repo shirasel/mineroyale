@@ -31,6 +31,7 @@ import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.Server
+import org.bukkit.Chunk
 import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.block.Block
@@ -40,6 +41,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -100,10 +102,10 @@ class GameManagerStartFlowTest {
         assertEquals(2, sessionOf(fixture.gameManager).participantCount)
         assertEquals(2, sessionOf(fixture.gameManager).aliveCount)
         verify(exactly = 1) { fixture.messageService.broadcastGameStarting() }
-        verify(exactly = 1) { fixture.playerSetupService.prepareMatchPlayers(any()) }
-        verify(exactly = 1) { fixture.messageService.logMatchStarted(any()) }
-        verify(exactly = 1) { fixture.compassTrackingService.start(any()) }
-        verify(exactly = 1) { fixture.scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) }
+        verify(timeout = 1_000, exactly = 1) { fixture.playerSetupService.prepareMatchPlayers(any()) }
+        verify(timeout = 1_000, exactly = 1) { fixture.messageService.logMatchStarted(any()) }
+        verify(timeout = 1_000, exactly = 1) { fixture.compassTrackingService.start(any()) }
+        verify(timeout = 1_000, exactly = 1) { fixture.scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) }
     }
 
     private fun createFixture(): StartFlowFixture {
@@ -129,7 +131,13 @@ class GameManagerStartFlowTest {
         every { plugin.namespace() } returns "mineroyale12111"
         every { server.scheduler } returns scheduler
         every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), any<Long>(), any<Long>()) } returns scoreboardTask
-        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk(relaxed = true)
+        every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
+            (invocation.args[1] as Runnable).run()
+            mockk(relaxed = true)
+        }
+        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } answers {
+            mockk(relaxed = true)
+        }
         every { configManager.gameSettings } returns GameSettings(
             minPlayers = 2,
             maxPlayers = 10,
@@ -199,9 +207,11 @@ class GameManagerStartFlowTest {
     }
 
     private fun mockWorld(border: WorldBorder): World {
+        val chunk = mockk<Chunk>()
         val world = mockk<World>()
         every { world.worldBorder } returns border
         every { world.players } returns emptyList()
+        every { world.getChunkAtAsync(any<Location>(), true) } returns CompletableFuture.completedFuture(chunk)
         every { world.getHighestBlockYAt(any<Int>(), any<Int>()) } returns 64
         every { world.getBlockAt(any<Int>(), any<Int>(), any<Int>()) } answers {
             val block = mockk<Block>()

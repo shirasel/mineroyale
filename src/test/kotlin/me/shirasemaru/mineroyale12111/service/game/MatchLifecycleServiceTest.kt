@@ -18,6 +18,7 @@ import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -62,6 +63,10 @@ class MatchLifecycleServiceTest {
         val task = mockk<BukkitTask>()
         every { Bukkit.getScheduler() } returns scheduler
         every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) } returns task
+        every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
+            (invocation.args[1] as Runnable).run()
+            mockk(relaxed = true)
+        }
 
         val borderManager = mockk<BorderManager>()
         val playerRegistry = mockk<PlayerRegistry>()
@@ -244,8 +249,16 @@ class MatchLifecycleServiceTest {
     }
 
     private fun mockPlugin(): JavaPlugin {
+        val server = mockk<Server>()
+        val scheduler = mockk<BukkitScheduler>()
         val plugin = mockk<JavaPlugin>()
+        every { plugin.server } returns server
+        every { server.scheduler } returns scheduler
         every { plugin.logger } returns Logger.getLogger("test")
+        every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
+            (invocation.args[1] as Runnable).run()
+            mockk(relaxed = true)
+        }
         return plugin
     }
 

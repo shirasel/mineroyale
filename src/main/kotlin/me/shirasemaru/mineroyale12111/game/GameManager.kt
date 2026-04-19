@@ -107,11 +107,13 @@ class GameManager(
             minPlayers = configManager.gameSettings.minPlayers,
             participantProvider = matchLifecycleService::getEligiblePlayers,
             onTick = { time, players ->
+                matchLifecycleService.prepareSpawnLocations(players)
                 if (time <= 5 || time % 10 == 0) {
                     messageService.broadcastCountdown(time, players)
                 }
             },
             onCancelled = {
+                matchLifecycleService.discardPreparedSpawnLocations()
                 messageService.broadcastCountdownCancelled()
                 matchFlowService.cancelCountdown(session)
             },
