@@ -22,7 +22,7 @@ world:
   name: world
 
   # ランダムに選ぶボーダー中心の最大距離
-  random-center-range: 2000
+  random-center-range: 3000
 
   # 初期ボーダーサイズ
   initial-border-size: 1000
@@ -36,23 +36,23 @@ border:
   warning-time: 5
 
   phases:
-    - wait: 45
-      duration: 240
+    - wait: 240
+      duration: 180
       size: 600
 
-    - wait: 30
-      duration: 180
+    - wait: 240
+      duration: 160
       size: 400
 
-    - wait: 20
+    - wait: 240
       duration: 120
       size: 200
 
-    - wait: 15
+    - wait: 200
       duration: 90
       size: 100
 
-    - wait: 10
+    - wait: 200
       duration: 60
       size: 50
 
