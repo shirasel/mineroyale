@@ -12,12 +12,15 @@ import me.shirasemaru.mineroyale12111.config.GameSettings
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.game.GameState
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
+import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Bukkit
+import org.bukkit.Chunk
 import org.bukkit.GameMode
+import org.bukkit.Location
 import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.entity.Player
@@ -78,11 +81,13 @@ class MatchLifecycleServiceTest {
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
         val configManager = mockConfigManager()
+        val borderPlan = MatchBorderPlan(centerX = 12.0, centerZ = -8.0, size = 100.0)
 
         every { matchFlowService.moveToRunning(any()) } answers { firstArg<GameSession>().apply { state = GameState.RUNNING; pvpEnabled = false } }
         every { playerRegistry.resetForMatch(any()) } just runs
-        every { borderManager.initialize(any()) } just runs
-        every { borderManager.generateRandomSpawnLocations(any()) } returns emptyMap()
+        every { borderManager.initialize(any(), borderPlan) } just runs
+        every { borderManager.createInitialBorderPlan() } returns borderPlan
+        every { borderManager.generateRandomSpawnLocations(any(), borderPlan) } returns emptyMap()
         every { playerSetupService.prepareMatchPlayer(any(), any()) } just runs
         every { borderManager.runPhases(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
@@ -110,11 +115,73 @@ class MatchLifecycleServiceTest {
         assertEquals(GameState.RUNNING, session.state)
         assertEquals(2, session.participantCount)
         assertEquals(2, session.aliveCount)
-        verify { borderManager.initialize(session) }
+        verify { borderManager.initialize(session, borderPlan) }
         verify(exactly = 0) { playerSetupService.prepareMatchPlayer(any(), any()) }
         verify { borderManager.runPhases(session, any()) }
         verify { compassTrackingService.start(any()) }
         verify { messageService.logMatchStarted(any()) }
+    }
+
+    @Test
+    fun `prepared spawn locations reuse the same border plan at match start`() {
+        mockkStatic(Bukkit::class)
+        val scheduler = mockk<BukkitScheduler>()
+        val task = mockk<BukkitTask>()
+        every { Bukkit.getScheduler() } returns scheduler
+        every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) } returns task
+        every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
+            (invocation.args[1] as Runnable).run()
+            mockk(relaxed = true)
+        }
+
+        val borderManager = mockk<BorderManager>()
+        val playerRegistry = mockk<PlayerRegistry>()
+        val playerSetupService = mockk<PlayerSetupService>()
+        val compassTrackingService = mockk<CompassTrackingService>()
+        val victoryService = mockk<VictoryService>()
+        val messageService = mockk<MessageService>()
+        val matchFlowService = mockk<MatchFlowService>()
+        val plugin = mockPlugin()
+        val scoreboardManager = mockk<ScoreboardManager>()
+        val configManager = mockConfigManager()
+        val borderPlan = MatchBorderPlan(centerX = 20.0, centerZ = 40.0, size = 120.0)
+        val player = mockPlayer("alpha")
+        val spawnWorld = mockk<World>()
+        val chunk = mockk<Chunk>()
+        val spawn = Location(spawnWorld, 18.0, 70.0, 38.0)
+
+        every { matchFlowService.moveToRunning(any()) } answers { firstArg<GameSession>().apply { state = GameState.RUNNING } }
+        every { playerRegistry.resetForMatch(any()) } just runs
+        every { borderManager.createInitialBorderPlan() } returns borderPlan
+        every { borderManager.generateRandomSpawnLocations(listOf(player), borderPlan) } returns mapOf(player to spawn)
+        every { borderManager.initialize(any(), borderPlan) } just runs
+        every { playerSetupService.prepareMatchPlayer(player, spawn) } just runs
+        every { borderManager.runPhases(any(), any()) } just runs
+        every { compassTrackingService.start(any()) } just runs
+        every { messageService.logMatchStarted(any()) } just runs
+        every { scoreboardManager.setNameTagsHidden(any()) } just runs
+        every { spawnWorld.getChunkAtAsync(spawn, true) } returns java.util.concurrent.CompletableFuture.completedFuture(chunk)
+
+        val service = MatchLifecycleService(
+            plugin = plugin,
+            configManager = configManager,
+            scoreboardManager = scoreboardManager,
+            playerRegistry = playerRegistry,
+            playerSetupService = playerSetupService,
+            borderManager = borderManager,
+            compassTrackingService = compassTrackingService,
+            victoryService = victoryService,
+            messageService = messageService,
+            matchFlowService = matchFlowService
+        )
+
+        service.prepareSpawnLocations(listOf(player))
+        service.startMatch(GameSession(), listOf(player), onPlayersReady = {}) {}
+
+        verify(exactly = 1) { borderManager.createInitialBorderPlan() }
+        verify(exactly = 1) { borderManager.generateRandomSpawnLocations(listOf(player), borderPlan) }
+        verify(exactly = 1) { borderManager.initialize(any(), borderPlan) }
+        verify(exactly = 1) { playerSetupService.prepareMatchPlayer(player, spawn) }
     }
 
     @Test

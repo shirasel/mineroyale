@@ -16,13 +16,26 @@ class SpawnPointService(
     fun generateRandomSpawnLocations(
         players: List<Player>,
         border: WorldBorder
+    ): Map<Player, Location> =
+        generateRandomSpawnLocations(
+            players = players,
+            plan = MatchBorderPlan(
+                centerX = border.center.x,
+                centerZ = border.center.z,
+                size = border.size
+            )
+        )
+
+    fun generateRandomSpawnLocations(
+        players: List<Player>,
+        plan: MatchBorderPlan
     ): Map<Player, Location> {
         val world = configManager.gameWorld
         val result = mutableMapOf<Player, Location>()
         val usedLocations = mutableListOf<Location>()
 
-        val center = border.center
-        val radius = border.size / 2 - 1
+        val center = Location(world, plan.centerX, 0.0, plan.centerZ)
+        val radius = plan.size / 2 - 1
         val minDistance = configManager.spawnSettings.minDistance
         val minDistanceSq = minDistance * minDistance
 

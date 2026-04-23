@@ -32,7 +32,23 @@ class BorderService(
     private var pvpEnabled = false
     private var gameEndTime: Long = 0
 
+    fun createInitialBorderPlan(): MatchBorderPlan {
+        val startRadius = configManager.worldSettings.initialBorderSize / 2
+        val worldLimit = configManager.worldSettings.randomCenterRange
+        val max = worldLimit - startRadius
+
+        return MatchBorderPlan(
+            centerX = Random.nextDouble(-max, max),
+            centerZ = Random.nextDouble(-max, max),
+            size = configManager.worldSettings.initialBorderSize
+        )
+    }
+
     fun initialize(session: GameSession, world: World, border: WorldBorder) {
+        initialize(session, world, border, createInitialBorderPlan())
+    }
+
+    fun initialize(session: GameSession, world: World, border: WorldBorder, plan: MatchBorderPlan) {
         stop()
 
         session.currentPhase = 0
@@ -40,15 +56,8 @@ class BorderService(
         session.phaseState = PhaseState.IDLE.displayName
         session.remainingPhaseSeconds = 0
 
-        val startRadius = configManager.worldSettings.initialBorderSize / 2
-        val worldLimit = configManager.worldSettings.randomCenterRange
-        val max = worldLimit - startRadius
-
-        val centerX = Random.nextDouble(-max, max)
-        val centerZ = Random.nextDouble(-max, max)
-
-        border.setCenter(centerX, centerZ)
-        border.size = configManager.worldSettings.initialBorderSize
+        border.setCenter(plan.centerX, plan.centerZ)
+        border.size = plan.size
         border.warningDistance = configManager.borderSettings.warningDistance
         border.setWarningTimeTicks(configManager.borderSettings.warningTime * 20)
 

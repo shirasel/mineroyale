@@ -3,6 +3,7 @@ package me.shirasemaru.mineroyale12111.service.game
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
+import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
@@ -38,6 +39,7 @@ class MatchLifecycleService(
     private var originalLocatorBar: Boolean? = null
     private var preparedSpawnLocations: Map<Player, Location>? = null
     private var preparedSpawnPlayerIds: List<UUID>? = null
+    private var preparedBorderPlan: MatchBorderPlan? = null
 
     fun getEligiblePlayers(): List<Player> =
         Bukkit.getOnlinePlayers()
@@ -55,7 +57,9 @@ class MatchLifecycleService(
             return
         }
 
-        preparedSpawnLocations = borderManager.generateRandomSpawnLocations(players)
+        val borderPlan = borderManager.createInitialBorderPlan()
+        preparedBorderPlan = borderPlan
+        preparedSpawnLocations = borderManager.generateRandomSpawnLocations(players, borderPlan)
         preparedSpawnPlayerIds = playerIds
     }
 
@@ -75,11 +79,12 @@ class MatchLifecycleService(
         session.aliveCount = players.size
 
         applyMatchRules()
-        val spawnMap = consumePreparedSpawnLocations(players)
+        val borderPlan = consumePreparedBorderPlan()
+        val spawnMap = consumePreparedSpawnLocations(players, borderPlan)
 
         preloadSpawnChunks(spawnMap) {
             runStartStep {
-                borderManager.initialize(session)
+                borderManager.initialize(session, borderPlan)
                 prepareMatchPlayersInBatches(spawnMap) {
                     runStartStep {
                         onPlayersReady()
@@ -132,11 +137,11 @@ class MatchLifecycleService(
         session.resetToWaiting()
     }
 
-    private fun consumePreparedSpawnLocations(players: List<Player>): Map<Player, Location> {
+    private fun consumePreparedSpawnLocations(players: List<Player>, borderPlan: MatchBorderPlan): Map<Player, Location> {
         val playerIds = players.map { it.uniqueId }
         val cached = if (preparedSpawnPlayerIds == playerIds) preparedSpawnLocations else null
         clearPreparedSpawnLocations()
-        return cached ?: borderManager.generateRandomSpawnLocations(players)
+        return cached ?: borderManager.generateRandomSpawnLocations(players, borderPlan)
     }
 
     private fun preloadSpawnChunks(
@@ -198,7 +203,11 @@ class MatchLifecycleService(
     private fun clearPreparedSpawnLocations() {
         preparedSpawnLocations = null
         preparedSpawnPlayerIds = null
+        preparedBorderPlan = null
     }
+
+    private fun consumePreparedBorderPlan(): MatchBorderPlan =
+        preparedBorderPlan ?: borderManager.createInitialBorderPlan()
 
     private fun applyMatchRules() {
         scoreboardManager.setNameTagsHidden(configManager.gameSettings.hideNameTags)

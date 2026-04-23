@@ -27,10 +27,21 @@ class BorderManager(
         borderDamageService.start(world, border, aliveProvider)
     }
 
+    fun initialize(session: GameSession, plan: MatchBorderPlan) {
+        borderService.initialize(session, world, border, plan)
+        borderDamageService.start(world, border, aliveProvider)
+    }
+
     fun isPvpEnabled(): Boolean = borderService.isPvpEnabled()
 
     fun generateRandomSpawnLocations(players: List<Player>) =
         spawnPointService.generateRandomSpawnLocations(players, border)
+
+    fun createInitialBorderPlan(): MatchBorderPlan =
+        borderService.createInitialBorderPlan()
+
+    fun generateRandomSpawnLocations(players: List<Player>, plan: MatchBorderPlan) =
+        spawnPointService.generateRandomSpawnLocations(players, plan)
 
     fun runPhases(session: GameSession, onComplete: () -> Unit) {
         borderService.runPhases(session, border, onComplete)

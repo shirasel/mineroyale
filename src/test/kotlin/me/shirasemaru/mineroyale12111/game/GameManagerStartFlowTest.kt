@@ -17,6 +17,7 @@ import me.shirasemaru.mineroyale12111.config.GameSettings
 import me.shirasemaru.mineroyale12111.config.PhaseSettings
 import me.shirasemaru.mineroyale12111.config.SpawnSettings
 import me.shirasemaru.mineroyale12111.config.WorldSettings
+import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
@@ -128,6 +129,7 @@ class GameManagerStartFlowTest {
         val victoryService = mockk<VictoryService>(relaxed = true)
         val compassTrackingService = mockk<CompassTrackingService>()
         val endCrystalService = mockk<EndCrystalService>(relaxed = true)
+        val borderPlan = MatchBorderPlan(centerX = 24.0, centerZ = -16.0, size = 100.0)
 
         every { plugin.server } returns server
         every { plugin.logger } returns Logger.getLogger("test")
@@ -178,11 +180,14 @@ class GameManagerStartFlowTest {
             )
         )
         every { configManager.gameWorld } returns world
+        every { world.worldBorder } returns border
         every { countdownService.cancel(any()) } just runs
         every { playerSetupService.prepareMatchPlayer(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
         every { scoreboardManager.update(any()) } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
+        every { border.center } returns Location(world, borderPlan.centerX, 0.0, borderPlan.centerZ)
+        every { border.size } returns borderPlan.size
 
         val gameManager = GameManager(
             plugin = plugin,
