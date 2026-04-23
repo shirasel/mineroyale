@@ -25,15 +25,19 @@ class PlayerSetupService(
         player.gameMode = GameMode.SPECTATOR
     }
 
+    fun prepareMatchPlayer(player: Player, location: Location) {
+        resetPlayerState(player)
+        player.gameMode = GameMode.SURVIVAL
+        player.inventory.addItem(ItemStack(Material.OAK_PLANKS, 64))
+        if (configManager.gameSettings.giveInitialCompass) {
+            player.inventory.addItem(ItemStack(Material.COMPASS))
+        }
+        player.teleport(location)
+    }
+
     fun prepareMatchPlayers(spawnMap: Map<Player, Location>) {
         spawnMap.forEach { (player, location) ->
-            resetPlayerState(player)
-            player.gameMode = GameMode.SURVIVAL
-            player.inventory.addItem(ItemStack(Material.OAK_PLANKS, 64))
-            if (configManager.gameSettings.giveInitialCompass) {
-                player.inventory.addItem(ItemStack(Material.COMPASS))
-            }
-            player.teleport(location)
+            prepareMatchPlayer(player, location)
         }
     }
 

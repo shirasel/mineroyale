@@ -18,6 +18,11 @@ class BorderService(
     private val onPvpStateChanged: (Boolean) -> Unit
 ) {
 
+    private companion object {
+        const val SHRINK_UPDATE_INTERVAL_TICKS = 2L
+        const val FINAL_MOVE_UPDATE_INTERVAL_TICKS = 2L
+    }
+
     private var shrinkTask: BukkitTask? = null
     private var waitTask: BukkitTask? = null
     private var moveTask: BukkitTask? = null
@@ -180,15 +185,17 @@ class BorderService(
             return
         }
 
-        val ticks = seconds * 20
+        val totalTicks = seconds * 20
+        val updateInterval = SHRINK_UPDATE_INTERVAL_TICKS
+        val steps = (totalTicks + updateInterval - 1) / updateInterval
         val diff = start - end
-        val perTick = diff / ticks
+        val perUpdate = diff / steps.toDouble()
 
         var current = start
         var count = 0L
 
         shrinkTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            if (count >= ticks) {
+            if (count >= steps) {
                 border.size = end
                 shrinkTask?.cancel()
                 updateRemainingGameSeconds(session)
@@ -196,10 +203,10 @@ class BorderService(
                 return@Runnable
             }
 
-            current -= perTick
+            current -= perUpdate
             border.size = current
             count++
-        }, 0L, 1L)
+        }, 0L, updateInterval)
     }
 
     private fun startFinalMove(session: GameSession, border: WorldBorder) {
@@ -210,7 +217,9 @@ class BorderService(
             return
         }
 
-        val ticks = duration * 20
+        val totalTicks = duration * 20L
+        val updateInterval = FINAL_MOVE_UPDATE_INTERVAL_TICKS
+        val steps = ((totalTicks + updateInterval - 1) / updateInterval).toInt()
         var count = 0
         var moveX = 0.0
         var moveZ = 0.0
@@ -221,8 +230,8 @@ class BorderService(
             val start = border.center
             val targetX = start.x + Random.nextDouble(-range, range)
             val targetZ = start.z + Random.nextDouble(-range, range)
-            moveX = (targetX - start.x) / ticks
-            moveZ = (targetZ - start.z) / ticks
+            moveX = (targetX - start.x) / steps.toDouble()
+            moveZ = (targetZ - start.z) / steps.toDouble()
             count = 0
             startPhaseCountdown(session, duration)
         }
@@ -230,7 +239,7 @@ class BorderService(
         chooseNextTarget()
 
         moveTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            if (count >= ticks) {
+            if (count >= steps) {
                 updateRemainingGameSeconds(session)
                 chooseNextTarget()
                 return@Runnable
@@ -239,7 +248,7 @@ class BorderService(
             val center = border.center
             border.setCenter(center.x + moveX, center.z + moveZ)
             count++
-        }, 0L, 1L)
+        }, 0L, updateInterval)
 
         messageService.broadcastFinalMoveStarted()
     }

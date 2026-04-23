@@ -29,6 +29,10 @@ class MatchLifecycleService(
     private val matchFlowService: MatchFlowService
 ) {
 
+    private companion object {
+        const val MATCH_START_PLAYER_BATCH_SIZE = 4
+    }
+
     private var scoreboardTask: BukkitTask? = null
     private var originalAnnounceAdvancements: Boolean? = null
     private var originalLocatorBar: Boolean? = null
@@ -59,7 +63,12 @@ class MatchLifecycleService(
         clearPreparedSpawnLocations()
     }
 
-    fun startMatch(session: GameSession, players: List<Player>, onMatchComplete: () -> Unit) {
+    fun startMatch(
+        session: GameSession,
+        players: List<Player>,
+        onPlayersReady: () -> Unit = {},
+        onMatchComplete: () -> Unit
+    ) {
         matchFlowService.moveToRunning(session)
         playerRegistry.resetForMatch(players)
         session.participantCount = players.size
@@ -71,9 +80,9 @@ class MatchLifecycleService(
         preloadSpawnChunks(spawnMap) {
             runStartStep {
                 borderManager.initialize(session)
-                runStartStep {
-                    playerSetupService.prepareMatchPlayers(spawnMap)
+                prepareMatchPlayersInBatches(spawnMap) {
                     runStartStep {
+                        onPlayersReady()
                         borderManager.runPhases(session, onMatchComplete)
                         startScoreboardTask(session)
                         compassTrackingService.start(playerRegistry::getAlivePlayers)
@@ -150,6 +159,36 @@ class MatchLifecycleService(
 
         CompletableFuture.allOf(*futures.toTypedArray())
             .thenRun(onLoaded)
+    }
+
+    private fun prepareMatchPlayersInBatches(
+        spawnMap: Map<Player, Location>,
+        onFinished: () -> Unit
+    ) {
+        val entries = spawnMap.entries.toList()
+        if (entries.isEmpty()) {
+            onFinished()
+            return
+        }
+
+        fun processBatch(fromIndex: Int) {
+            val batch = entries.drop(fromIndex).take(MATCH_START_PLAYER_BATCH_SIZE)
+            batch.forEach { (player, location) ->
+                playerSetupService.prepareMatchPlayer(player, location)
+            }
+
+            val nextIndex = fromIndex + batch.size
+            if (nextIndex >= entries.size) {
+                onFinished()
+                return
+            }
+
+            runStartStep {
+                processBatch(nextIndex)
+            }
+        }
+
+        processBatch(0)
     }
 
     private fun runStartStep(action: () -> Unit) {

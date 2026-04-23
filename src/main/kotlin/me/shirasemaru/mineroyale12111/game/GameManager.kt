@@ -34,7 +34,14 @@ class GameManager(
 
     private val session = GameSession()
     private val matchFlowService = MatchFlowService()
-    private val borderManager = BorderManager(plugin, configManager, messageService) { session.pvpEnabled = it }
+    private var victoryRespawnLocation: Location? = null
+    private val borderManager = BorderManager(
+        plugin = plugin,
+        configManager = configManager,
+        messageService = messageService,
+        onPvpStateChanged = { session.pvpEnabled = it },
+        aliveProvider = playerRegistry::getAlivePlayers
+    )
     private val matchLifecycleService = MatchLifecycleService(
         plugin = plugin,
         configManager = configManager,
@@ -96,18 +103,21 @@ class GameManager(
     fun stopGame() {
         if (!matchFlowService.canStop(session)) return
 
+        clearVictoryRespawnLocation()
         countdownService.cancel(session)
         matchLifecycleService.stopCurrentMatch(session)
     }
 
     private fun startCountdown() {
+        matchLifecycleService.prepareSpawnLocations(matchLifecycleService.getEligiblePlayers())
+
         countdownService.start(
             session = session,
             seconds = configManager.gameSettings.countdownSeconds,
             minPlayers = configManager.gameSettings.minPlayers,
             participantProvider = matchLifecycleService::getEligiblePlayers,
+            onParticipantsChanged = matchLifecycleService::prepareSpawnLocations,
             onTick = { time, players ->
-                matchLifecycleService.prepareSpawnLocations(players)
                 if (time <= 5 || time % 10 == 0) {
                     messageService.broadcastCountdown(time, players)
                 }
@@ -119,10 +129,12 @@ class GameManager(
             },
             onCompleted = { players ->
                 messageService.broadcastGameStarting()
-                matchLifecycleService.startMatch(session, players) {
-                    endGame(null)
-                }
-                endCrystalService.distribute(players)
+                matchLifecycleService.startMatch(
+                    session = session,
+                    players = players,
+                    onPlayersReady = { endCrystalService.distribute(players) },
+                    onMatchComplete = { endGame(null) }
+                )
             }
         )
     }
@@ -130,8 +142,11 @@ class GameManager(
     fun endGame(winner: Player?) {
         if (!matchFlowService.canFinish(session)) return
 
+        victoryRespawnLocation = winner?.location?.clone()?.add(0.0, 1.0, 0.0)
         countdownService.cancel(session)
-        matchLifecycleService.finishMatch(session, winner)
+        matchLifecycleService.finishMatch(session, winner) {
+            clearVictoryRespawnLocation()
+        }
     }
 
     fun handlePlayerDeath(player: Player) {
@@ -196,6 +211,10 @@ class GameManager(
     fun isOutsideCurrentBorder(location: Location): Boolean =
         borderManager.isOutsideBorder(location)
 
+    fun observeBorderDamageTarget(player: Player) {
+        borderManager.observeBorderDamageTarget(player, playerRegistry.isAlive(player))
+    }
+
     fun teleportSpectator(spectator: Player, target: Player) {
         spectatorService.teleportSpectatorToTarget(spectator, target)
         messageService.sendSpectatorTargetChanged(spectator, target.name)
@@ -215,4 +234,15 @@ class GameManager(
 
     fun useEndCrystal(player: Player): Boolean =
         endCrystalService.use(player, playerRegistry.getAlivePlayers())
+
+    fun respawnOverrideLocation(): Location? =
+        if (session.state == GameState.ENDING) {
+            victoryRespawnLocation?.clone()
+        } else {
+            null
+        }
+
+    private fun clearVictoryRespawnLocation() {
+        victoryRespawnLocation = null
+    }
 }

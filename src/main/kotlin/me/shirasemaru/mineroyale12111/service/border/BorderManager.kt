@@ -11,7 +11,8 @@ class BorderManager(
     plugin: JavaPlugin,
     private val configManager: ConfigManager,
     messageService: MessageService,
-    onPvpStateChanged: (Boolean) -> Unit
+    onPvpStateChanged: (Boolean) -> Unit,
+    private val aliveProvider: () -> List<Player>
 ) {
 
     private val borderService = BorderService(plugin, configManager, messageService, onPvpStateChanged)
@@ -23,7 +24,7 @@ class BorderManager(
 
     fun initialize(session: GameSession) {
         borderService.initialize(session, world, border)
-        borderDamageService.start(world, border)
+        borderDamageService.start(world, border, aliveProvider)
     }
 
     fun isPvpEnabled(): Boolean = borderService.isPvpEnabled()
@@ -55,5 +56,9 @@ class BorderManager(
     fun reset(session: GameSession) {
         borderService.reset(session, border)
         borderDamageService.stop()
+    }
+
+    fun observeBorderDamageTarget(player: Player, isAlive: Boolean) {
+        borderDamageService.observePlayer(player, border, isAlive)
     }
 }

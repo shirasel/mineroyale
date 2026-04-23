@@ -48,10 +48,11 @@ class BorderManagerTest {
         val configManager = mockConfigManager(world)
         val messageService = mockk<MessageService>(relaxed = true)
         val pvpChanges = mutableListOf<Boolean>()
-        val manager = BorderManager(plugin, configManager, messageService) { pvpChanges += it }
+        val manager = BorderManager(plugin, configManager, messageService, { pvpChanges += it }) { listOf(outsidePlayer) }
         val session = GameSession()
 
         manager.initialize(session)
+        manager.observeBorderDamageTarget(outsidePlayer, isAlive = true)
         schedulerDriver.advanceTicks(40)
 
         assertEquals(0, session.currentPhase)
@@ -79,7 +80,7 @@ class BorderManagerTest {
         val world = mockWorld(border, listOf(outsidePlayer))
         val configManager = mockConfigManager(world)
         val messageService = mockk<MessageService>(relaxed = true)
-        val manager = BorderManager(plugin, configManager, messageService) { }
+        val manager = BorderManager(plugin, configManager, messageService, { }) { listOf(outsidePlayer) }
         val session = GameSession(
             currentPhase = 2,
             totalPhases = 4,
@@ -89,6 +90,7 @@ class BorderManagerTest {
         )
 
         manager.initialize(session)
+        manager.observeBorderDamageTarget(outsidePlayer, isAlive = true)
         schedulerDriver.advanceTicks(40)
 
         manager.reset(session)

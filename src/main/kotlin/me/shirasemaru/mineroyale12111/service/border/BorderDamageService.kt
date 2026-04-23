@@ -1,6 +1,7 @@
 package me.shirasemaru.mineroyale12111.service.border
 
 import me.shirasemaru.mineroyale12111.config.ConfigManager
+import org.bukkit.entity.Player
 import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.plugin.java.JavaPlugin
@@ -15,22 +16,23 @@ class BorderDamageService(
 
     private var damageTask: BukkitTask? = null
     private val outsideTime = mutableMapOf<UUID, Int>()
+    private val trackedPlayers = linkedSetOf<UUID>()
 
-    fun start(world: World, border: WorldBorder) {
+    fun start(
+        world: World,
+        border: WorldBorder,
+        aliveProvider: () -> List<Player>
+    ) {
         stop()
 
         damageTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            val center = border.center
-            val radius = border.size / 2
-            val damageRadius = radius + 1
+            val alivePlayers = aliveProvider()
+            val aliveById = alivePlayers.associateBy(Player::getUniqueId)
 
-            world.players.forEach { player ->
-                val dx = abs(player.location.x - center.x)
-                val dz = abs(player.location.z - center.z)
-                val outside = dx > damageRadius || dz > damageRadius
-                val uuid = player.uniqueId
-
-                if (!outside) {
+            trackedPlayers.toList().forEach { uuid ->
+                val player = aliveById[uuid]
+                if (player == null || !isOutsideBorder(player.location, border)) {
+                    trackedPlayers.remove(uuid)
                     outsideTime.remove(uuid)
                     return@forEach
                 }
@@ -54,9 +56,30 @@ class BorderDamageService(
         }, 40L, 40L)
     }
 
+    fun observePlayer(player: Player, border: WorldBorder, isAlive: Boolean) {
+        val uuid = player.uniqueId
+        if (!isAlive || !isOutsideBorder(player.location, border)) {
+            trackedPlayers.remove(uuid)
+            outsideTime.remove(uuid)
+            return
+        }
+
+        trackedPlayers.add(uuid)
+    }
+
     fun stop() {
         damageTask?.cancel()
         damageTask = null
         outsideTime.clear()
+        trackedPlayers.clear()
+    }
+
+    private fun isOutsideBorder(location: org.bukkit.Location, border: WorldBorder): Boolean {
+        val center = border.center
+        val radius = border.size / 2
+        val damageRadius = radius + 1
+        val dx = abs(location.x - center.x)
+        val dz = abs(location.z - center.z)
+        return dx > damageRadius || dz > damageRadius
     }
 }

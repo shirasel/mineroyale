@@ -20,6 +20,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerKickEvent
+import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.plugin.java.JavaPlugin
@@ -212,6 +213,7 @@ class GameListenerTest {
         every { deathEvent.entity } returns player
         every { player.uniqueId } returns java.util.UUID.randomUUID()
         every { player.location } returns deathLocation
+        every { gameManager.respawnOverrideLocation() } returns null
         every { gameManager.isSpectator(player) } returns true
         every { gameManager.reapplySpectatorMode(player) } returns Unit
 
@@ -231,9 +233,52 @@ class GameListenerTest {
         verify(exactly = 1) { gameManager.reapplySpectatorMode(player) }
     }
 
+    @Test
+    fun `onRespawn uses victory location while ending`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val player = mockPlayer()
+        val respawnEvent = mockRespawnEvent(player)
+        val victoryLocation = Location(mockk<World>(), 25.0, 80.0, -14.0)
+
+        every { gameManager.isRunning() } returns false
+        every { gameManager.respawnOverrideLocation() } returns victoryLocation
+
+        listener.onRespawn(respawnEvent)
+
+        assertEquals(victoryLocation, respawnEvent.respawnLocation)
+        verify(exactly = 0) { gameManager.reapplySpectatorMode(any()) }
+    }
+
+    @Test
+    fun `onMove observes border damage targets only while running and changing block`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val player = mockPlayer()
+        val event = mockMoveEvent(
+            player = player,
+            from = Location(mockk<World>(), 0.0, 64.0, 0.0),
+            to = Location(mockk<World>(), 1.0, 64.0, 0.0)
+        )
+
+        every { gameManager.isRunning() } returns false
+        every { gameManager.observeBorderDamageTarget(player) } returns Unit
+        listener.onMove(event)
+        verify(exactly = 0) { gameManager.observeBorderDamageTarget(any()) }
+
+        every { gameManager.isRunning() } returns true
+        listener.onMove(event)
+        verify(exactly = 1) { gameManager.observeBorderDamageTarget(player) }
+    }
+
     private fun mockPlayer(): Player {
         var gameMode = GameMode.SURVIVAL
         val player = mockk<Player>()
+        every { player.uniqueId } returns java.util.UUID.randomUUID()
         every { player.gameMode } answers { gameMode }
         every { player.gameMode = any() } answers { gameMode = firstArg() }
         return player
@@ -277,6 +322,14 @@ class GameListenerTest {
         every { event.block } returns block
         every { event.isCancelled() } answers { cancelled }
         every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        return event
+    }
+
+    private fun mockMoveEvent(player: Player, from: Location, to: Location): PlayerMoveEvent {
+        val event = mockk<PlayerMoveEvent>()
+        every { event.player } returns player
+        every { event.from } returns from
+        every { event.to } returns to
         return event
     }
 

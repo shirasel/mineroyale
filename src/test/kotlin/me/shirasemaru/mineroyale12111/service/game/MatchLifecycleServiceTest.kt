@@ -83,7 +83,7 @@ class MatchLifecycleServiceTest {
         every { playerRegistry.resetForMatch(any()) } just runs
         every { borderManager.initialize(any()) } just runs
         every { borderManager.generateRandomSpawnLocations(any()) } returns emptyMap()
-        every { playerSetupService.prepareMatchPlayers(any()) } just runs
+        every { playerSetupService.prepareMatchPlayer(any(), any()) } just runs
         every { borderManager.runPhases(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
         every { messageService.logMatchStarted(any()) } just runs
@@ -105,13 +105,13 @@ class MatchLifecycleServiceTest {
         val session = GameSession()
         val players = listOf(mockPlayer("alpha"), mockPlayer("bravo"))
 
-        service.startMatch(session, players) {}
+        service.startMatch(session, players, onPlayersReady = {}) {}
 
         assertEquals(GameState.RUNNING, session.state)
         assertEquals(2, session.participantCount)
         assertEquals(2, session.aliveCount)
         verify { borderManager.initialize(session) }
-        verify { playerSetupService.prepareMatchPlayers(emptyMap()) }
+        verify(exactly = 0) { playerSetupService.prepareMatchPlayer(any(), any()) }
         verify { borderManager.runPhases(session, any()) }
         verify { compassTrackingService.start(any()) }
         verify { messageService.logMatchStarted(any()) }

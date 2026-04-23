@@ -51,7 +51,9 @@ class BorderDamageServiceTest {
         val world = mockWorld(listOf(insidePlayer, outsidePlayer))
         val border = mockBorder(size = 20.0)
 
-        service.start(world, border)
+        service.start(world, border) { listOf(insidePlayer, outsidePlayer) }
+        service.observePlayer(insidePlayer, border, isAlive = true)
+        service.observePlayer(outsidePlayer, border, isAlive = true)
 
         schedulerDriver.advanceTicks(40)
 
@@ -82,18 +84,50 @@ class BorderDamageServiceTest {
         val world = mockWorld(listOf(player))
         val border = mockBorder(size = 20.0)
 
-        service.start(world, border)
+        service.start(world, border) { listOf(player) }
+        service.observePlayer(player, border, isAlive = true)
 
         schedulerDriver.advanceTicks(40)
         schedulerDriver.advanceTicks(40)
 
         location = Location(null, 0.0, 64.0, 0.0)
+        service.observePlayer(player, border, isAlive = true)
         schedulerDriver.advanceTicks(40)
 
         location = Location(null, 20.0, 64.0, 0.0)
+        service.observePlayer(player, border, isAlive = true)
         schedulerDriver.advanceTicks(40)
 
         assertEquals(listOf(2.0, 3.0, 2.0), damageLog)
+    }
+
+    @Test
+    fun `observePlayer only tracks alive players outside the border`() {
+        val schedulerDriver = TestSchedulerDriver()
+        val plugin = mockPlugin(schedulerDriver.scheduler)
+        val configManager = mockConfigManager(
+            EnhancedDamageSettings(
+                enabled = false,
+                baseDamage = 1.0,
+                increasePerSecond = 0.5,
+                maxDamage = 10.0
+            )
+        )
+        val service = BorderDamageService(plugin, configManager)
+        val damageLog = mutableListOf<Double>()
+        val player = mockPlayer(
+            uuid = UUID.nameUUIDFromBytes("spectator".toByteArray()),
+            x = 20.0,
+            z = 0.0,
+            damageLog = damageLog
+        )
+        val border = mockBorder(size = 20.0)
+
+        service.start(mockWorld(emptyList()), border) { emptyList() }
+        service.observePlayer(player, border, isAlive = false)
+        schedulerDriver.advanceTicks(40)
+
+        assertEquals(emptyList(), damageLog)
     }
 
     private fun mockPlugin(scheduler: BukkitScheduler): JavaPlugin {

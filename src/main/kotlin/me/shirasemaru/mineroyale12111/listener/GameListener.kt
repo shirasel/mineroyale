@@ -14,6 +14,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerKickEvent
+import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.plugin.java.JavaPlugin
@@ -91,17 +92,31 @@ class GameListener(
     }
 
     @EventHandler
-    fun onRespawn(event: PlayerRespawnEvent) {
+    fun onMove(event: PlayerMoveEvent) {
         if (!gameManager.isRunning()) return
 
+        val from = event.from
+        val to = event.to
+        if (from.blockX == to.blockX && from.blockY == to.blockY && from.blockZ == to.blockZ) {
+            return
+        }
+
+        gameManager.observeBorderDamageTarget(event.player)
+    }
+
+    @EventHandler
+    fun onRespawn(event: PlayerRespawnEvent) {
+        val respawnOverride = gameManager.respawnOverrideLocation()
+        if (!gameManager.isRunning() && respawnOverride == null) return
+
         val player = event.player
-        val location = deathLocations.remove(player.uniqueId)
+        val location = deathLocations.remove(player.uniqueId) ?: respawnOverride
 
         if (location != null) {
             event.respawnLocation = location
         }
 
-        if (gameManager.isSpectator(player)) {
+        if (gameManager.isRunning() && gameManager.isSpectator(player)) {
             player.gameMode = GameMode.SPECTATOR
             gameManager.reapplySpectatorMode(player)
         }

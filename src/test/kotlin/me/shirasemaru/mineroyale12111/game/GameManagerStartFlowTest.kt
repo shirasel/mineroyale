@@ -72,6 +72,7 @@ class GameManagerStartFlowTest {
                 seconds = 15,
                 minPlayers = 2,
                 participantProvider = any(),
+                onParticipantsChanged = any(),
                 onTick = any(),
                 onCancelled = any(),
                 onCompleted = capture(onCompletedSlot)
@@ -88,6 +89,7 @@ class GameManagerStartFlowTest {
                 seconds = 15,
                 minPlayers = 2,
                 participantProvider = any(),
+                onParticipantsChanged = any(),
                 onTick = any(),
                 onCancelled = any(),
                 onCompleted = any()
@@ -102,7 +104,8 @@ class GameManagerStartFlowTest {
         assertEquals(2, sessionOf(fixture.gameManager).participantCount)
         assertEquals(2, sessionOf(fixture.gameManager).aliveCount)
         verify(exactly = 1) { fixture.messageService.broadcastGameStarting() }
-        verify(timeout = 1_000, exactly = 1) { fixture.playerSetupService.prepareMatchPlayers(any()) }
+        verify(timeout = 1_000, exactly = 2) { fixture.playerSetupService.prepareMatchPlayer(any(), any()) }
+        verify(timeout = 1_000, exactly = 1) { fixture.endCrystalService.distribute(any()) }
         verify(timeout = 1_000, exactly = 1) { fixture.messageService.logMatchStarted(any()) }
         verify(timeout = 1_000, exactly = 1) { fixture.compassTrackingService.start(any()) }
         verify(timeout = 1_000, exactly = 1) { fixture.scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) }
@@ -176,7 +179,7 @@ class GameManagerStartFlowTest {
         )
         every { configManager.gameWorld } returns world
         every { countdownService.cancel(any()) } just runs
-        every { playerSetupService.prepareMatchPlayers(any()) } just runs
+        every { playerSetupService.prepareMatchPlayer(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
         every { scoreboardManager.update(any()) } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
@@ -202,7 +205,8 @@ class GameManagerStartFlowTest {
             countdownService = countdownService,
             messageService = messageService,
             compassTrackingService = compassTrackingService,
-            scheduler = scheduler
+            scheduler = scheduler,
+            endCrystalService = endCrystalService
         )
     }
 
@@ -259,7 +263,8 @@ class GameManagerStartFlowTest {
         val countdownService: CountdownService,
         val messageService: MessageService,
         val compassTrackingService: CompassTrackingService,
-        val scheduler: BukkitScheduler
+        val scheduler: BukkitScheduler,
+        val endCrystalService: EndCrystalService
     )
 }
 
