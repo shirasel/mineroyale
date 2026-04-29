@@ -64,16 +64,16 @@ class GameListenerTest {
             scheduled = secondArg()
             task
         }
-        every { gameManager.handlePlayerDeath(player) } returns Unit
+        every { gameManager.handlePlayerDeath(player, deathLocation) } returns Unit
 
         listener.onDeath(event)
 
         verify(exactly = 1) { scheduler.runTaskLater(plugin, any<Runnable>(), 1L) }
-        verify(exactly = 0) { gameManager.handlePlayerDeath(player) }
+        verify(exactly = 0) { gameManager.handlePlayerDeath(any(), any()) }
 
         scheduled!!.run()
 
-        verify(exactly = 1) { gameManager.handlePlayerDeath(player) }
+        verify(exactly = 1) { gameManager.handlePlayerDeath(player, deathLocation) }
     }
 
     @Test
@@ -224,7 +224,7 @@ class GameListenerTest {
             secondArg<Runnable>().run()
             mockk(relaxed = true)
         }
-        every { gameManager.handlePlayerDeath(player) } returns Unit
+        every { gameManager.handlePlayerDeath(player, deathLocation) } returns Unit
 
         listener.onDeath(deathEvent)
         listener.onRespawn(respawnEvent)

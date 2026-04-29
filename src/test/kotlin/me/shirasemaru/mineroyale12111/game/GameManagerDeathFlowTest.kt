@@ -10,6 +10,7 @@ import io.mockk.verify
 import me.shirasemaru.mineroyale12111.Mineroyale12111
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
+import me.shirasemaru.mineroyale12111.service.game.DeathMarkerService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
 import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
@@ -52,13 +53,15 @@ class GameManagerDeathFlowTest {
             playerRegistry = fixture.playerRegistry,
             players = listOf(eliminated, survivorA, survivorB)
         )
+        val deathLocation = Location(mockk<World>(), 15.0, 64.0, -3.0)
 
-        fixture.gameManager.handlePlayerDeath(eliminated)
+        fixture.gameManager.handlePlayerDeath(eliminated, deathLocation)
 
         assertEquals(GameState.RUNNING, fixture.gameManager.getState())
         assertFalse(fixture.playerRegistry.isAlive(eliminated))
         assertEquals(2, sessionOf(fixture.gameManager).aliveCount)
         verify(exactly = 1) { fixture.spectatorService.applySpectatorMode(eliminated) }
+        verify(exactly = 1) { fixture.deathMarkerService.spawnMarker(eliminated, deathLocation) }
         verify(exactly = 1) { fixture.messageService.broadcastPlayerEliminated("eliminated", 2) }
         verify(exactly = 0) { fixture.victoryService.playVictory(any(), any()) }
     }
@@ -76,8 +79,9 @@ class GameManagerDeathFlowTest {
             playerRegistry = fixture.playerRegistry,
             players = listOf(eliminated, winner)
         )
+        val deathLocation = Location(mockk<World>(), 2.0, 70.0, 8.0)
 
-        fixture.gameManager.handlePlayerDeath(eliminated)
+        fixture.gameManager.handlePlayerDeath(eliminated, deathLocation)
 
         assertEquals(GameState.WAITING, fixture.gameManager.getState())
         assertFalse(fixture.gameManager.isRunning())
@@ -86,6 +90,7 @@ class GameManagerDeathFlowTest {
         assertEquals(0.0, fixture.border.center.z, 0.001)
         assertEquals(0, fixture.playerRegistry.aliveCount())
         verify(exactly = 1) { fixture.spectatorService.applySpectatorMode(eliminated) }
+        verify(exactly = 1) { fixture.deathMarkerService.spawnMarker(eliminated, deathLocation) }
         verify(exactly = 1) { fixture.messageService.broadcastPlayerEliminated("eliminated", 1) }
         verify(exactly = 1) { fixture.victoryService.playVictory(winner, any()) }
         verify(exactly = 1) { fixture.playerSetupService.resetAllOnlinePlayersToLobby() }
@@ -107,6 +112,7 @@ class GameManagerDeathFlowTest {
         val victoryService = mockk<VictoryService>()
         val compassTrackingService = mockk<CompassTrackingService>()
         val endCrystalService = mockk<EndCrystalService>(relaxed = true)
+        val deathMarkerService = mockk<DeathMarkerService>()
 
         every { plugin.namespace() } returns "mineroyale12111"
         every { configManager.gameWorld } returns world
@@ -120,6 +126,7 @@ class GameManagerDeathFlowTest {
         every { scoreboardManager.clear() } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { compassTrackingService.stop() } just runs
+        every { deathMarkerService.spawnMarker(any(), any()) } just runs
         every { victoryService.playVictory(any(), any()) } answers {
             secondArg<() -> Unit>().invoke()
         }
@@ -135,7 +142,8 @@ class GameManagerDeathFlowTest {
             scoreboardManager = scoreboardManager,
             victoryService = victoryService,
             compassTrackingService = compassTrackingService,
-            endCrystalService = endCrystalService
+            endCrystalService = endCrystalService,
+            deathMarkerService = deathMarkerService
         )
 
         return Fixture(
@@ -147,6 +155,7 @@ class GameManagerDeathFlowTest {
             scoreboardManager = scoreboardManager,
             victoryService = victoryService,
             compassTrackingService = compassTrackingService,
+            deathMarkerService = deathMarkerService,
             border = border
         )
     }
@@ -212,6 +221,7 @@ class GameManagerDeathFlowTest {
         val scoreboardManager: ScoreboardManager,
         val victoryService: VictoryService,
         val compassTrackingService: CompassTrackingService,
+        val deathMarkerService: DeathMarkerService,
         val border: WorldBorder
     )
 }

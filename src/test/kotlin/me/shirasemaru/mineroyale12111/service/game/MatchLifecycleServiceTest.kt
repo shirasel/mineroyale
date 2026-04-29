@@ -76,6 +76,7 @@ class MatchLifecycleServiceTest {
         val playerSetupService = mockk<PlayerSetupService>()
         val compassTrackingService = mockk<CompassTrackingService>()
         val victoryService = mockk<VictoryService>()
+        val deathMarkerService = mockk<DeathMarkerService>()
         val messageService = mockk<MessageService>()
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
@@ -91,6 +92,7 @@ class MatchLifecycleServiceTest {
         every { playerSetupService.prepareMatchPlayer(any(), any()) } just runs
         every { borderManager.runPhases(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
+        every { deathMarkerService.clearMarkers() } just runs
         every { messageService.logMatchStarted(any()) } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
 
@@ -103,6 +105,7 @@ class MatchLifecycleServiceTest {
             borderManager = borderManager,
             compassTrackingService = compassTrackingService,
             victoryService = victoryService,
+            deathMarkerService = deathMarkerService,
             messageService = messageService,
             matchFlowService = matchFlowService
         )
@@ -116,6 +119,7 @@ class MatchLifecycleServiceTest {
         assertEquals(2, session.participantCount)
         assertEquals(2, session.aliveCount)
         verify { borderManager.initialize(session, borderPlan) }
+        verify { deathMarkerService.clearMarkers() }
         verify(exactly = 0) { playerSetupService.prepareMatchPlayer(any(), any()) }
         verify { borderManager.runPhases(session, any()) }
         verify { compassTrackingService.start(any()) }
@@ -139,6 +143,7 @@ class MatchLifecycleServiceTest {
         val playerSetupService = mockk<PlayerSetupService>()
         val compassTrackingService = mockk<CompassTrackingService>()
         val victoryService = mockk<VictoryService>()
+        val deathMarkerService = mockk<DeathMarkerService>()
         val messageService = mockk<MessageService>()
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
@@ -158,6 +163,7 @@ class MatchLifecycleServiceTest {
         every { playerSetupService.prepareMatchPlayer(player, spawn) } just runs
         every { borderManager.runPhases(any(), any()) } just runs
         every { compassTrackingService.start(any()) } just runs
+        every { deathMarkerService.clearMarkers() } just runs
         every { messageService.logMatchStarted(any()) } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { spawnWorld.getChunkAtAsync(spawn, true) } returns java.util.concurrent.CompletableFuture.completedFuture(chunk)
@@ -171,6 +177,7 @@ class MatchLifecycleServiceTest {
             borderManager = borderManager,
             compassTrackingService = compassTrackingService,
             victoryService = victoryService,
+            deathMarkerService = deathMarkerService,
             messageService = messageService,
             matchFlowService = matchFlowService
         )
@@ -181,6 +188,7 @@ class MatchLifecycleServiceTest {
         verify(exactly = 1) { borderManager.createInitialBorderPlan() }
         verify(exactly = 1) { borderManager.generateRandomSpawnLocations(listOf(player), borderPlan) }
         verify(exactly = 1) { borderManager.initialize(any(), borderPlan) }
+        verify(exactly = 1) { deathMarkerService.clearMarkers() }
         verify(exactly = 1) { playerSetupService.prepareMatchPlayer(player, spawn) }
     }
 
@@ -191,6 +199,7 @@ class MatchLifecycleServiceTest {
         val playerSetupService = mockk<PlayerSetupService>()
         val compassTrackingService = mockk<CompassTrackingService>()
         val victoryService = mockk<VictoryService>()
+        val deathMarkerService = mockk<DeathMarkerService>(relaxed = true)
         val messageService = mockk<MessageService>()
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
@@ -215,6 +224,7 @@ class MatchLifecycleServiceTest {
             borderManager = borderManager,
             compassTrackingService = compassTrackingService,
             victoryService = victoryService,
+            deathMarkerService = deathMarkerService,
             messageService = messageService,
             matchFlowService = matchFlowService
         )
@@ -246,6 +256,7 @@ class MatchLifecycleServiceTest {
         val playerSetupService = mockk<PlayerSetupService>()
         val compassTrackingService = mockk<CompassTrackingService>()
         val victoryService = mockk<VictoryService>()
+        val deathMarkerService = mockk<DeathMarkerService>(relaxed = true)
         val messageService = mockk<MessageService>()
         val matchFlowService = mockk<MatchFlowService>()
         val plugin = mockPlugin()
@@ -274,6 +285,7 @@ class MatchLifecycleServiceTest {
             borderManager = borderManager,
             compassTrackingService = compassTrackingService,
             victoryService = victoryService,
+            deathMarkerService = deathMarkerService,
             messageService = messageService,
             matchFlowService = matchFlowService
         )
@@ -299,6 +311,7 @@ class MatchLifecycleServiceTest {
             borderManager = mockk(),
             compassTrackingService = mockk(),
             victoryService = mockk(),
+            deathMarkerService = mockk(relaxed = true),
             messageService = mockk(),
             matchFlowService = mockk()
         )

@@ -26,6 +26,7 @@ class MatchLifecycleService(
     private val borderManager: BorderManager,
     private val compassTrackingService: CompassTrackingService,
     private val victoryService: VictoryService,
+    private val deathMarkerService: DeathMarkerService,
     private val messageService: MessageService,
     private val matchFlowService: MatchFlowService
 ) {
@@ -73,6 +74,7 @@ class MatchLifecycleService(
         onPlayersReady: () -> Unit = {},
         onMatchComplete: () -> Unit
     ) {
+        deathMarkerService.clearMarkers()
         matchFlowService.moveToRunning(session)
         playerRegistry.resetForMatch(players)
         session.participantCount = players.size

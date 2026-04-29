@@ -37,7 +37,7 @@ class GameListener(
 
         Bukkit.getScheduler().runTaskLater(
             plugin,
-            Runnable { gameManager.handlePlayerDeath(player) },
+            Runnable { gameManager.handlePlayerDeath(player, deathLocations[player.uniqueId]) },
             1L
         )
     }

@@ -4,6 +4,7 @@ import me.shirasemaru.mineroyale12111.Mineroyale12111
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
+import me.shirasemaru.mineroyale12111.service.game.DeathMarkerService
 import me.shirasemaru.mineroyale12111.service.game.MatchFlowService
 import me.shirasemaru.mineroyale12111.service.game.MatchLifecycleService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
@@ -29,7 +30,8 @@ class GameManager(
     scoreboardManager: ScoreboardManager,
     victoryService: VictoryService,
     compassTrackingService: CompassTrackingService,
-    private val endCrystalService: EndCrystalService = EndCrystalService(plugin, configManager, messageService)
+    private val endCrystalService: EndCrystalService = EndCrystalService(plugin, configManager, messageService),
+    private val deathMarkerService: DeathMarkerService = DeathMarkerService(plugin)
 ) {
 
     private val session = GameSession()
@@ -51,6 +53,7 @@ class GameManager(
         borderManager = borderManager,
         compassTrackingService = compassTrackingService,
         victoryService = victoryService,
+        deathMarkerService = deathMarkerService,
         messageService = messageService,
         matchFlowService = matchFlowService
     )
@@ -149,12 +152,13 @@ class GameManager(
         }
     }
 
-    fun handlePlayerDeath(player: Player) {
+    fun handlePlayerDeath(player: Player, deathLocation: Location? = null) {
         when (val result = matchFlowService.processElimination(session, playerRegistry, player)) {
             MatchFlowService.EliminationResult.Ignored -> return
 
             is MatchFlowService.EliminationResult.Eliminated -> {
                 session.aliveCount = result.aliveCount
+                deathLocation?.let { deathMarkerService.spawnMarker(player, it) }
 
                 spectatorService.applySpectatorMode(player)
                 spectatorService.refreshTargets(
