@@ -29,7 +29,7 @@ class DeathMarkerService(
         armorStand.isVisible = true
         armorStand.setBasePlate(false)
         armorStand.setArms(false)
-        armorStand.equipment?.helmet = createPlayerHead(player)
+        armorStand.equipment.helmet = createPlayerHead(player)
         markerIds += armorStand.uniqueId
     }
 
