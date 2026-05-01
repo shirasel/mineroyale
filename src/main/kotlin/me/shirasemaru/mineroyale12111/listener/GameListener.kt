@@ -13,6 +13,7 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.player.PlayerArmorStandManipulateEvent
 import org.bukkit.event.player.PlayerKickEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -56,9 +57,14 @@ class GameListener(
 
     @EventHandler
     fun onDamage(event: EntityDamageByEntityEvent) {
+        val victim = event.entity
+        if (gameManager.isProtectedDeathMarker(victim)) {
+            event.isCancelled = true
+            return
+        }
+
         if (!gameManager.isRunning()) return
 
-        val victim = event.entity
         if (victim !is Player) return
 
         val attacker: Player? = when (val damager = event.damager) {
@@ -77,6 +83,12 @@ class GameListener(
         if (!gameManager.isPvpEnabled()) {
             event.isCancelled = true
         }
+    }
+
+    @EventHandler
+    fun onArmorStandManipulate(event: PlayerArmorStandManipulateEvent) {
+        if (!gameManager.isProtectedDeathMarker(event.rightClicked)) return
+        event.isCancelled = true
     }
 
     @EventHandler

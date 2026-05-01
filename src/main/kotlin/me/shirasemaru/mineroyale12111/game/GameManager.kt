@@ -16,6 +16,7 @@ import me.shirasemaru.mineroyale12111.service.player.SpectatorService
 import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Location
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
@@ -238,6 +239,9 @@ class GameManager(
 
     fun useEndCrystal(player: Player): Boolean =
         endCrystalService.use(player, playerRegistry.getAlivePlayers())
+
+    fun isProtectedDeathMarker(entity: Entity): Boolean =
+        deathMarkerService.isMarker(entity)
 
     fun respawnOverrideLocation(): Location? =
         if (session.state == GameState.ENDING) {

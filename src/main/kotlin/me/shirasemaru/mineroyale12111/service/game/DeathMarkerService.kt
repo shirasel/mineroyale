@@ -4,6 +4,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.ArmorStand
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
@@ -40,6 +41,9 @@ class DeathMarkerService(
         }
         markerIds.clear()
     }
+
+    fun isMarker(entity: Entity): Boolean =
+        markerIds.contains(entity.uniqueId)
 
     private fun createPlayerHead(player: OfflinePlayer): ItemStack {
         val item = ItemStack(Material.PLAYER_HEAD)

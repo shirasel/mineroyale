@@ -19,6 +19,7 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.player.PlayerArmorStandManipulateEvent
 import org.bukkit.event.player.PlayerKickEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -111,6 +112,7 @@ class GameListenerTest {
         val victim = mockPlayer()
         val event = mockDamageEvent(attacker, victim)
 
+        every { gameManager.isProtectedDeathMarker(victim) } returns false
         every { gameManager.isRunning() } returns true
         every { gameManager.isSpectator(victim) } returns false
         every { gameManager.isSpectator(attacker) } returns false
@@ -119,6 +121,24 @@ class GameListenerTest {
         listener.onDamage(event)
 
         assertTrue(event.isCancelled())
+    }
+
+    @Test
+    fun `onDamage cancels attacks against protected death markers even outside match flow`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val attacker = mockPlayer()
+        val marker = mockk<org.bukkit.entity.Entity>()
+        val event = mockDamageEvent(attacker, marker)
+
+        every { gameManager.isProtectedDeathMarker(marker) } returns true
+
+        listener.onDamage(event)
+
+        assertTrue(event.isCancelled())
+        verify(exactly = 0) { gameManager.isRunning() }
     }
 
     @Test
@@ -132,6 +152,7 @@ class GameListenerTest {
         val victim = mockPlayer()
         val event = mockDamageEvent(nonPlayerProjectile, victim)
 
+        every { gameManager.isProtectedDeathMarker(victim) } returns false
         every { gameManager.isRunning() } returns true
         every { nonPlayerProjectile.shooter } returns nonPlayerSource
 
@@ -151,6 +172,7 @@ class GameListenerTest {
         val victim = mockPlayer()
         val event = mockDamageEvent(attacker, victim)
 
+        every { gameManager.isProtectedDeathMarker(victim) } returns false
         every { gameManager.isRunning() } returns true
         every { gameManager.isSpectator(victim) } returns false
         every { gameManager.isSpectator(attacker) } returns true
@@ -275,6 +297,22 @@ class GameListenerTest {
         verify(exactly = 1) { gameManager.observeBorderDamageTarget(player) }
     }
 
+    @Test
+    fun `onArmorStandManipulate cancels interaction with protected death markers`() {
+        val plugin = mockk<JavaPlugin>()
+        val configManager = mockConfigManager()
+        val gameManager = mockk<me.shirasemaru.mineroyale12111.game.GameManager>()
+        val listener = GameListener(plugin, configManager, gameManager)
+        val armorStand = mockk<org.bukkit.entity.ArmorStand>()
+        val event = mockArmorStandManipulateEvent(armorStand)
+
+        every { gameManager.isProtectedDeathMarker(armorStand) } returns true
+
+        listener.onArmorStandManipulate(event)
+
+        assertTrue(event.isCancelled())
+    }
+
     private fun mockPlayer(): Player {
         var gameMode = GameMode.SURVIVAL
         val player = mockk<Player>()
@@ -284,7 +322,7 @@ class GameListenerTest {
         return player
     }
 
-    private fun mockDamageEvent(damager: Any, victim: Player): EntityDamageByEntityEvent {
+    private fun mockDamageEvent(damager: Any, victim: org.bukkit.entity.Entity): EntityDamageByEntityEvent {
         var cancelled = false
         val event = mockk<EntityDamageByEntityEvent>()
         every { event.entity } returns victim
@@ -330,6 +368,17 @@ class GameListenerTest {
         every { event.player } returns player
         every { event.from } returns from
         every { event.to } returns to
+        return event
+    }
+
+    private fun mockArmorStandManipulateEvent(
+        armorStand: org.bukkit.entity.ArmorStand
+    ): PlayerArmorStandManipulateEvent {
+        var cancelled = false
+        val event = mockk<PlayerArmorStandManipulateEvent>()
+        every { event.rightClicked } returns armorStand
+        every { event.isCancelled } answers { cancelled }
+        every { event.isCancelled = any() } answers { cancelled = firstArg() }
         return event
     }
 
