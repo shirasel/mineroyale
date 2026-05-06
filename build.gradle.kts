@@ -30,6 +30,14 @@ tasks {
         // Your plugin's jar (or shadowJar if present) will be used automatically.
         minecraftVersion("1.21")
     }
+
+    shadowJar {
+        archiveClassifier.set("")
+    }
+
+    jar {
+        archiveClassifier.set("plain")
+    }
 }
 
 val targetJavaVersion = 21
@@ -38,6 +46,10 @@ kotlin {
 }
 
 tasks.build {
+    dependsOn("shadowJar")
+}
+
+tasks.assemble {
     dependsOn("shadowJar")
 }
 
