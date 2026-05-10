@@ -7,6 +7,7 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.GameSettings
@@ -122,7 +123,9 @@ class MatchLifecycleServiceTest {
         val session = GameSession()
         val players = listOf(mockPlayer("alpha"), mockPlayer("bravo"))
 
-        service.startMatch(session, players, onPlayersReady = {}) {}
+        runBlocking {
+            service.startMatch(session, players, onPlayersReady = {}) {}
+        }
 
         assertEquals(GameState.RUNNING, session.state)
         assertEquals(2, session.participantCount)
@@ -198,7 +201,9 @@ class MatchLifecycleServiceTest {
         )
 
         service.prepareSpawnLocations(listOf(player))
-        service.startMatch(GameSession(), listOf(player), onPlayersReady = {}) {}
+        runBlocking {
+            service.startMatch(GameSession(), listOf(player), onPlayersReady = {}) {}
+        }
 
         verify(exactly = 1) { borderManager.createInitialBorderPlan() }
         verify(exactly = 1) { borderManager.generateRandomSpawnLocations(listOf(player), borderPlan) }

@@ -1,5 +1,8 @@
 package me.shirasemaru.mineroyale12111.game
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import org.bukkit.plugin.java.JavaPlugin
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
@@ -17,6 +20,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 class GameManager(
+    private val plugin: JavaPlugin,
     private val configManager: ConfigManager,
     private val playerRegistry: PlayerRegistry,
     private val playerSetupService: PlayerSetupService,
@@ -28,7 +32,8 @@ class GameManager(
     private val borderManager: BorderManager,
     private val endCrystalService: EndCrystalService,
     private val deathMarkerService: DeathMarkerService,
-    private val matchScopeHolder: MatchScopeHolder
+    private val matchScopeHolder: MatchScopeHolder,
+    private val coroutineScope: CoroutineScope
 ) {
 
     private val session get() = matchScopeHolder.current.session
@@ -107,12 +112,20 @@ class GameManager(
             },
             onCompleted = { players ->
                 messageService.broadcastGameStarting()
-                matchLifecycleService.startMatch(
-                    session = session,
-                    players = players,
-                    onPlayersReady = { endCrystalService.distribute(players) },
-                    onMatchComplete = { endGame(null) }
-                )
+                coroutineScope.launch {
+                    runCatching {
+                        matchLifecycleService.startMatch(
+                            session = session,
+                            players = players,
+                            onPlayersReady = { endCrystalService.distribute(players) },
+                            onMatchComplete = { endGame(null) }
+                        )
+                    }.onFailure { error ->
+                        plugin.logger.severe("Failed to start match: ${error.message}")
+                        error.printStackTrace()
+                        matchFlowService.cancelCountdown(session)
+                    }
+                }
             }
         )
     }

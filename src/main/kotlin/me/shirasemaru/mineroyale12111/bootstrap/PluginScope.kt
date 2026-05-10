@@ -1,6 +1,9 @@
 package me.shirasemaru.mineroyale12111.bootstrap
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import me.shirasemaru.mineroyale12111.Mineroyale12111
+import me.shirasemaru.mineroyale12111.coroutines.BukkitDispatcher
 import me.shirasemaru.mineroyale12111.game.GameManager
 import me.shirasemaru.mineroyale12111.game.MatchScopeFactory
 import me.shirasemaru.mineroyale12111.game.MatchScopeHolder
@@ -36,6 +39,7 @@ class PluginScope private constructor(
     val borderManager: BorderManager,
     val matchScopeFactory: MatchScopeFactory,
     val matchScopeHolder: MatchScopeHolder,
+    val coroutineScope: CoroutineScope,
     val matchLifecycleService: MatchLifecycleService,
     val gameManager: GameManager
 ) {
@@ -58,6 +62,7 @@ class PluginScope private constructor(
             val deathMarkerService = DeathMarkerService(plugin)
             val matchScopeFactory = MatchScopeFactory()
             val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
+            val coroutineScope = CoroutineScope(SupervisorJob() + BukkitDispatcher(plugin))
             val borderManager = BorderManager(
                 plugin = plugin,
                 configManager = configManager,
@@ -83,6 +88,7 @@ class PluginScope private constructor(
                 matchScopeHolder = matchScopeHolder
             )
             val gameManager = GameManager(
+                plugin = plugin,
                 configManager = configManager,
                 playerRegistry = playerRegistry,
                 playerSetupService = playerSetupService,
@@ -94,7 +100,8 @@ class PluginScope private constructor(
                 borderManager = borderManager,
                 endCrystalService = endCrystalService,
                 deathMarkerService = deathMarkerService,
-                matchScopeHolder = matchScopeHolder
+                matchScopeHolder = matchScopeHolder,
+                coroutineScope = coroutineScope
             )
 
             return PluginScope(
@@ -115,6 +122,7 @@ class PluginScope private constructor(
                 borderManager = borderManager,
                 matchScopeFactory = matchScopeFactory,
                 matchScopeHolder = matchScopeHolder,
+                coroutineScope = coroutineScope,
                 matchLifecycleService = matchLifecycleService,
                 gameManager = gameManager
             )

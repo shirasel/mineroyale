@@ -10,6 +10,7 @@ import me.shirasemaru.mineroyale12111.listener.HealthRegainListener
 import me.shirasemaru.mineroyale12111.listener.PlayerJoinListener
 import me.shirasemaru.mineroyale12111.listener.SpectatorListener
 import me.shirasemaru.mineroyale12111.service.game.MessageService
+import kotlinx.coroutines.cancel
 import org.bukkit.plugin.java.JavaPlugin
 
 class Mineroyale12111 : JavaPlugin() {
@@ -41,6 +42,9 @@ class Mineroyale12111 : JavaPlugin() {
     override fun onDisable() {
         if (::gameManager.isInitialized) {
             gameManager.stopGame()
+        }
+        if (::pluginScope.isInitialized) {
+            pluginScope.coroutineScope.cancel()
         }
 
         logger.info("Mineroyale12111 を無効化しました。")

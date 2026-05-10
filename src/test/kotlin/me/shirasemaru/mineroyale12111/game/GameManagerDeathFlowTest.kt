@@ -7,6 +7,8 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale12111.Mineroyale12111
 import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
@@ -121,6 +123,7 @@ class GameManagerDeathFlowTest {
         val matchFlowService = MatchFlowService()
         val matchScopeFactory = MatchScopeFactory()
         val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
+        val coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         val messageService = mockk<MessageService>()
         val scoreboardManager = mockk<ScoreboardManager>()
         val victoryService = mockk<VictoryService>()
@@ -174,6 +177,7 @@ class GameManagerDeathFlowTest {
         )
 
         val gameManager = GameManager(
+            plugin = plugin,
             configManager = configManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -185,7 +189,8 @@ class GameManagerDeathFlowTest {
             borderManager = borderManager,
             endCrystalService = endCrystalService,
             deathMarkerService = deathMarkerService,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            coroutineScope = coroutineScope
         )
 
         return Fixture(

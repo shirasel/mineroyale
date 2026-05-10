@@ -2,6 +2,8 @@ package me.shirasemaru.mineroyale12111.service.game
 
 import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
+import me.shirasemaru.mineroyale12111.coroutines.awaitChunkPreload
+import me.shirasemaru.mineroyale12111.coroutines.nextTick
 import me.shirasemaru.mineroyale12111.game.MatchScope
 import me.shirasemaru.mineroyale12111.game.MatchScopeFactory
 import me.shirasemaru.mineroyale12111.game.MatchScopeHolder
@@ -17,7 +19,6 @@ import org.bukkit.GameRule
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.concurrent.CompletableFuture
 
 class MatchLifecycleService(
     private val plugin: JavaPlugin,
@@ -84,7 +85,7 @@ class MatchLifecycleService(
         clearPreparedSpawnLocations()
     }
 
-    fun startMatch(
+    suspend fun startMatch(
         session: GameSession,
         players: List<Player>,
         onPlayersReady: () -> Unit = {},
@@ -100,20 +101,16 @@ class MatchLifecycleService(
         val borderPlan = consumePreparedBorderPlan()
         val spawnMap = consumePreparedSpawnLocations(players, borderPlan)
 
-        preloadSpawnChunks(spawnMap) {
-            runStartStep {
-                borderManager.initialize(session, borderPlan)
-                prepareMatchPlayersInBatches(spawnMap) {
-                    runStartStep {
-                        onPlayersReady()
-                        borderManager.runPhases(session, onMatchComplete)
-                        startScoreboardTask(session)
-                        compassTrackingService.start(playerRegistry::getAlivePlayers)
-                        messageService.logMatchStarted(plugin.logger)
-                    }
-                }
-            }
-        }
+        plugin.awaitChunkPreload(spawnMap.values)
+        plugin.nextTick()
+        borderManager.initialize(session, borderPlan)
+        prepareMatchPlayersInBatches(spawnMap)
+        plugin.nextTick()
+        onPlayersReady()
+        borderManager.runPhases(session, onMatchComplete)
+        startScoreboardTask(session)
+        compassTrackingService.start(playerRegistry::getAlivePlayers)
+        messageService.logMatchStarted(plugin.logger)
     }
 
     fun stopCurrentMatch(session: GameSession) {
@@ -162,60 +159,26 @@ class MatchLifecycleService(
         return cached ?: borderManager.generateRandomSpawnLocations(players, borderPlan)
     }
 
-    private fun preloadSpawnChunks(
-        spawnMap: Map<Player, Location>,
-        onLoaded: () -> Unit
-    ) {
-        val futures = spawnMap.values
-            .mapNotNull { location -> location.world?.getChunkAtAsync(location, true) }
-            .distinct()
-
-        if (futures.isEmpty()) {
-            onLoaded()
-            return
-        }
-
-        if (futures.all { it.isDone }) {
-            onLoaded()
-            return
-        }
-
-        CompletableFuture.allOf(*futures.toTypedArray())
-            .thenRun(onLoaded)
-    }
-
-    private fun prepareMatchPlayersInBatches(
-        spawnMap: Map<Player, Location>,
-        onFinished: () -> Unit
+    private suspend fun prepareMatchPlayersInBatches(
+        spawnMap: Map<Player, Location>
     ) {
         val entries = spawnMap.entries.toList()
         if (entries.isEmpty()) {
-            onFinished()
             return
         }
 
-        fun processBatch(fromIndex: Int) {
+        var fromIndex = 0
+        while (fromIndex < entries.size) {
             val batch = entries.drop(fromIndex).take(MATCH_START_PLAYER_BATCH_SIZE)
             batch.forEach { (player, location) ->
                 playerSetupService.prepareMatchPlayer(player, location)
             }
 
-            val nextIndex = fromIndex + batch.size
-            if (nextIndex >= entries.size) {
-                onFinished()
-                return
-            }
-
-            runStartStep {
-                processBatch(nextIndex)
+            fromIndex += batch.size
+            if (fromIndex < entries.size) {
+                plugin.nextTick()
             }
         }
-
-        processBatch(0)
-    }
-
-    private fun runStartStep(action: () -> Unit) {
-        plugin.server.scheduler.runTask(plugin, Runnable(action))
     }
 
     private fun clearPreparedSpawnLocations() {
