@@ -1,6 +1,5 @@
 package me.shirasemaru.mineroyale12111.game
 
-import me.shirasemaru.mineroyale12111.Mineroyale12111
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
@@ -8,62 +7,37 @@ import me.shirasemaru.mineroyale12111.service.game.DeathMarkerService
 import me.shirasemaru.mineroyale12111.service.game.MatchFlowService
 import me.shirasemaru.mineroyale12111.service.game.MatchLifecycleService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
-import me.shirasemaru.mineroyale12111.service.game.VictoryService
 import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale12111.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale12111.service.player.SpectatorService
-import me.shirasemaru.mineroyale12111.service.tracking.CompassTrackingService
-import me.shirasemaru.mineroyale12111.ui.ScoreboardManager
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 class GameManager(
-    private val plugin: Mineroyale12111,
     private val configManager: ConfigManager,
     private val playerRegistry: PlayerRegistry,
     private val playerSetupService: PlayerSetupService,
     private val spectatorService: SpectatorService,
     private val countdownService: CountdownService,
     private val messageService: MessageService,
-    scoreboardManager: ScoreboardManager,
-    victoryService: VictoryService,
-    compassTrackingService: CompassTrackingService,
-    private val endCrystalService: EndCrystalService = EndCrystalService(plugin, configManager, messageService),
-    private val deathMarkerService: DeathMarkerService = DeathMarkerService(plugin)
+    private val matchFlowService: MatchFlowService,
+    private val matchLifecycleService: MatchLifecycleService,
+    private val borderManager: BorderManager,
+    private val endCrystalService: EndCrystalService,
+    private val deathMarkerService: DeathMarkerService,
+    private val matchScopeHolder: MatchScopeHolder
 ) {
 
-    private val session = GameSession()
-    private val matchFlowService = MatchFlowService()
-    private var victoryRespawnLocation: Location? = null
-    private val borderManager = BorderManager(
-        plugin = plugin,
-        configManager = configManager,
-        messageService = messageService,
-        onPvpStateChanged = { session.pvpEnabled = it },
-        aliveProvider = playerRegistry::getAlivePlayers
-    )
-    private val matchLifecycleService = MatchLifecycleService(
-        plugin = plugin,
-        configManager = configManager,
-        scoreboardManager = scoreboardManager,
-        playerRegistry = playerRegistry,
-        playerSetupService = playerSetupService,
-        borderManager = borderManager,
-        compassTrackingService = compassTrackingService,
-        victoryService = victoryService,
-        deathMarkerService = deathMarkerService,
-        messageService = messageService,
-        matchFlowService = matchFlowService
-    )
+    private val session get() = matchScopeHolder.current.session
 
     fun getState(): GameState = session.state
 
     fun isRunning(): Boolean = session.state == GameState.RUNNING
 
-    fun isPvpEnabled(): Boolean = session.pvpEnabled
+    fun isPvpEnabled(): Boolean = borderManager.isPvpEnabled()
 
     fun canStartNewGame(): Boolean =
         matchFlowService.evaluateStart(
@@ -107,7 +81,7 @@ class GameManager(
     fun stopGame() {
         if (!matchFlowService.canStop(session)) return
 
-        clearVictoryRespawnLocation()
+        matchLifecycleService.clearVictoryRespawnLocation()
         countdownService.cancel(session)
         matchLifecycleService.stopCurrentMatch(session)
     }
@@ -146,11 +120,9 @@ class GameManager(
     fun endGame(winner: Player?) {
         if (!matchFlowService.canFinish(session)) return
 
-        victoryRespawnLocation = winner?.location?.clone()?.add(0.0, 1.0, 0.0)
+        matchLifecycleService.setVictoryRespawnLocation(winner?.location?.clone()?.add(0.0, 1.0, 0.0))
         countdownService.cancel(session)
-        matchLifecycleService.finishMatch(session, winner) {
-            clearVictoryRespawnLocation()
-        }
+        matchLifecycleService.finishMatch(session, winner)
     }
 
     fun handlePlayerDeath(player: Player, deathLocation: Location? = null) {
@@ -245,12 +217,8 @@ class GameManager(
 
     fun respawnOverrideLocation(): Location? =
         if (session.state == GameState.ENDING) {
-            victoryRespawnLocation?.clone()
+            matchLifecycleService.respawnOverrideLocation()
         } else {
             null
         }
-
-    private fun clearVictoryRespawnLocation() {
-        victoryRespawnLocation = null
-    }
 }

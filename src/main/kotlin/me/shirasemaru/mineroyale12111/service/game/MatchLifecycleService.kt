@@ -1,6 +1,10 @@
 package me.shirasemaru.mineroyale12111.service.game
 
+import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
+import me.shirasemaru.mineroyale12111.game.MatchScope
+import me.shirasemaru.mineroyale12111.game.MatchScopeFactory
+import me.shirasemaru.mineroyale12111.game.MatchScopeHolder
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
@@ -13,13 +17,12 @@ import org.bukkit.GameRule
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
 import java.util.concurrent.CompletableFuture
-import java.util.UUID
 
 class MatchLifecycleService(
     private val plugin: JavaPlugin,
     private val configManager: ConfigManager,
+    private val worldProvider: GameWorldProvider,
     private val scoreboardManager: ScoreboardManager,
     private val playerRegistry: PlayerRegistry,
     private val playerSetupService: PlayerSetupService,
@@ -28,19 +31,32 @@ class MatchLifecycleService(
     private val victoryService: VictoryService,
     private val deathMarkerService: DeathMarkerService,
     private val messageService: MessageService,
-    private val matchFlowService: MatchFlowService
+    private val matchFlowService: MatchFlowService,
+    private val matchScopeFactory: MatchScopeFactory,
+    private val matchScopeHolder: MatchScopeHolder
 ) {
 
     private companion object {
         const val MATCH_START_PLAYER_BATCH_SIZE = 4
     }
 
-    private var scoreboardTask: BukkitTask? = null
     private var originalAnnounceAdvancements: Boolean? = null
     private var originalLocatorBar: Boolean? = null
-    private var preparedSpawnLocations: Map<Player, Location>? = null
-    private var preparedSpawnPlayerIds: List<UUID>? = null
-    private var preparedBorderPlan: MatchBorderPlan? = null
+    private val matchScope: MatchScope
+        get() = matchScopeHolder.current
+
+    fun currentSession(): GameSession = matchScope.session
+
+    fun setVictoryRespawnLocation(location: Location?) {
+        matchScope.victoryRespawnLocation = location
+    }
+
+    fun clearVictoryRespawnLocation() {
+        matchScope.victoryRespawnLocation = null
+    }
+
+    fun respawnOverrideLocation(): Location? =
+        matchScope.victoryRespawnLocation?.clone()
 
     fun getEligiblePlayers(): List<Player> =
         Bukkit.getOnlinePlayers()
@@ -54,14 +70,14 @@ class MatchLifecycleService(
         }
 
         val playerIds = players.map { it.uniqueId }
-        if (preparedSpawnPlayerIds == playerIds && preparedSpawnLocations?.size == players.size) {
+        if (matchScope.preparedSpawnPlayerIds == playerIds && matchScope.preparedSpawnLocations?.size == players.size) {
             return
         }
 
         val borderPlan = borderManager.createInitialBorderPlan()
-        preparedBorderPlan = borderPlan
-        preparedSpawnLocations = borderManager.generateRandomSpawnLocations(players, borderPlan)
-        preparedSpawnPlayerIds = playerIds
+        matchScope.preparedBorderPlan = borderPlan
+        matchScope.preparedSpawnLocations = borderManager.generateRandomSpawnLocations(players, borderPlan)
+        matchScope.preparedSpawnPlayerIds = playerIds
     }
 
     fun discardPreparedSpawnLocations() {
@@ -107,7 +123,7 @@ class MatchLifecycleService(
         resetGame(session)
     }
 
-    fun finishMatch(session: GameSession, winner: Player?, onResetCompleted: (() -> Unit)? = null) {
+    fun finishMatch(session: GameSession, winner: Player?) {
         matchFlowService.moveToEnding(session)
         stopRealtimeSystems()
         borderManager.reset(session)
@@ -115,12 +131,10 @@ class MatchLifecycleService(
         if (winner != null && winner.isOnline) {
             victoryService.playVictory(winner) {
                 resetGame(session)
-                onResetCompleted?.invoke()
             }
         } else {
             messageService.broadcastNoWinner()
             resetGame(session)
-            onResetCompleted?.invoke()
         }
     }
 
@@ -131,17 +145,19 @@ class MatchLifecycleService(
     }
 
     private fun resetGame(session: GameSession) {
+        val completedScope = matchScope
         restoreMatchRules()
         clearPreparedSpawnLocations()
         playerSetupService.resetAllOnlinePlayersToLobby()
         scoreboardManager.clear()
         playerRegistry.clear()
-        session.resetToWaiting()
+        completedScope.resetRuntime()
+        matchScopeHolder.current = matchScopeFactory.create()
     }
 
     private fun consumePreparedSpawnLocations(players: List<Player>, borderPlan: MatchBorderPlan): Map<Player, Location> {
         val playerIds = players.map { it.uniqueId }
-        val cached = if (preparedSpawnPlayerIds == playerIds) preparedSpawnLocations else null
+        val cached = if (matchScope.preparedSpawnPlayerIds == playerIds) matchScope.preparedSpawnLocations else null
         clearPreparedSpawnLocations()
         return cached ?: borderManager.generateRandomSpawnLocations(players, borderPlan)
     }
@@ -203,17 +219,15 @@ class MatchLifecycleService(
     }
 
     private fun clearPreparedSpawnLocations() {
-        preparedSpawnLocations = null
-        preparedSpawnPlayerIds = null
-        preparedBorderPlan = null
+        matchScope.clearPreparedSpawns()
     }
 
     private fun consumePreparedBorderPlan(): MatchBorderPlan =
-        preparedBorderPlan ?: borderManager.createInitialBorderPlan()
+        matchScope.preparedBorderPlan ?: borderManager.createInitialBorderPlan()
 
     private fun applyMatchRules() {
         scoreboardManager.setNameTagsHidden(configManager.gameSettings.hideNameTags)
-        val world = configManager.gameWorld
+        val world = worldProvider.require()
         locatorBarRule()?.let { locatorBarRule ->
             originalLocatorBar = world.getGameRuleValue(locatorBarRule)
             world.setGameRule(locatorBarRule, configManager.gameSettings.showPlayerLocatorBar)
@@ -234,23 +248,23 @@ class MatchLifecycleService(
         scoreboardManager.setNameTagsHidden(false)
         originalLocatorBar?.let {
             locatorBarRule()?.let { locatorBarRule ->
-                configManager.gameWorld.setGameRule(locatorBarRule, it)
+                worldProvider.require().setGameRule(locatorBarRule, it)
             }
             originalLocatorBar = null
         }
 
         originalAnnounceAdvancements?.let {
             showAdvancementMessagesRule()?.let { rule ->
-                configManager.gameWorld.setGameRule(rule, it)
+                worldProvider.require().setGameRule(rule, it)
             }
             originalAnnounceAdvancements = null
         }
     }
 
     private fun startScoreboardTask(session: GameSession) {
-        scoreboardTask?.cancel()
+        matchScope.scoreboardTask?.cancel()
 
-        scoreboardTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+        matchScope.scoreboardTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
             if (!matchFlowService.canFinish(session)) return@Runnable
 
             session.aliveCount = playerRegistry.aliveCount()
@@ -259,8 +273,8 @@ class MatchLifecycleService(
     }
 
     private fun stopScoreboardTask() {
-        scoreboardTask?.cancel()
-        scoreboardTask = null
+        matchScope.scoreboardTask?.cancel()
+        matchScope.scoreboardTask = null
     }
 
     private fun locatorBarRule(): GameRule<Boolean>? =

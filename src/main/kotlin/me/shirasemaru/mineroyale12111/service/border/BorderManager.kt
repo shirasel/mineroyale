@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale12111.service.border
 
+import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.service.game.MessageService
@@ -10,16 +11,17 @@ import org.bukkit.plugin.java.JavaPlugin
 class BorderManager(
     plugin: JavaPlugin,
     private val configManager: ConfigManager,
+    private val worldProvider: GameWorldProvider,
     messageService: MessageService,
     onPvpStateChanged: (Boolean) -> Unit,
     private val aliveProvider: () -> List<Player>
 ) {
 
     private val borderService = BorderService(plugin, configManager, messageService, onPvpStateChanged)
-    private val spawnPointService = SpawnPointService(configManager)
+    private val spawnPointService = SpawnPointService(configManager, worldProvider)
     private val borderDamageService = BorderDamageService(plugin, configManager)
 
-    private val world get() = configManager.gameWorld
+    private val world get() = worldProvider.require()
     private val border get() = world.worldBorder
 
     fun initialize(session: GameSession) {

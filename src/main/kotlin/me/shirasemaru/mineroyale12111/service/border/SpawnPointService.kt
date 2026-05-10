@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale12111.service.border
 
+import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import org.bukkit.Location
 import org.bukkit.Material
@@ -10,6 +11,7 @@ import kotlin.random.Random
 
 class SpawnPointService(
     private val configManager: ConfigManager,
+    private val worldProvider: GameWorldProvider,
     private val nextCoordinate: (Double, Double) -> Double = { from, to -> Random.nextDouble(from, to) }
 ) {
 
@@ -30,7 +32,7 @@ class SpawnPointService(
         players: List<Player>,
         plan: MatchBorderPlan
     ): Map<Player, Location> {
-        val world = configManager.gameWorld
+        val world = worldProvider.require()
         val result = mutableMapOf<Player, Location>()
         val usedLocations = mutableListOf<Location>()
 

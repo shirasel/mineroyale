@@ -2,6 +2,7 @@ package me.shirasemaru.mineroyale12111.service.border
 
 import io.mockk.every
 import io.mockk.mockk
+import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.SpawnSettings
 import org.bukkit.Location
@@ -24,7 +25,7 @@ class SpawnPointServiceTest {
             materialByColumn = mapOf(4 to mapOf(-3 to Material.GRASS_BLOCK))
         )
         val configManager = mockConfigManager(world, minDistance = 5.0)
-        val service = SpawnPointService(configManager, sequenceCoordinates(4.0, -3.0))
+        val service = SpawnPointService(configManager, mockWorldProvider(world), sequenceCoordinates(4.0, -3.0))
         val border = mockBorder(centerX = 0.0, centerZ = 0.0, size = 20.0)
         val player = mockPlayer("alpha")
 
@@ -58,6 +59,7 @@ class SpawnPointServiceTest {
         val configManager = mockConfigManager(world, minDistance = 5.0)
         val service = SpawnPointService(
             configManager,
+            mockWorldProvider(world),
             sequenceCoordinates(
                 2.0, 2.0,
                 4.0, 4.0,
@@ -98,7 +100,7 @@ class SpawnPointServiceTest {
         )
         val configManager = mockConfigManager(world, minDistance = 5.0)
         val repeatedUnsafe = DoubleArray(100) { 1.0 }
-        val service = SpawnPointService(configManager, sequenceCoordinates(*repeatedUnsafe))
+        val service = SpawnPointService(configManager, mockWorldProvider(world), sequenceCoordinates(*repeatedUnsafe))
         val border = mockBorder(centerX = 0.0, centerZ = 0.0, size = 20.0)
         val player = mockPlayer("fallback")
 
@@ -116,6 +118,12 @@ class SpawnPointServiceTest {
         every { configManager.spawnSettings } returns SpawnSettings(minDistance = minDistance)
         return configManager
     }
+
+    private fun mockWorldProvider(world: World): GameWorldProvider =
+        mockk {
+            every { require() } returns world
+            every { find() } returns world
+        }
 
     private fun mockWorld(
         highestYByColumn: Map<Int, Map<Int, Int>>,

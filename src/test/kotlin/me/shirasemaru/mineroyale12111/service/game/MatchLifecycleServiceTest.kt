@@ -7,10 +7,13 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.GameSettings
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.game.GameState
+import me.shirasemaru.mineroyale12111.game.MatchScopeFactory
+import me.shirasemaru.mineroyale12111.game.MatchScopeHolder
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
@@ -82,6 +85,9 @@ class MatchLifecycleServiceTest {
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
         val configManager = mockConfigManager()
+        val worldProvider = mockWorldProvider()
+        val matchScopeFactory = MatchScopeFactory()
+        val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
         val borderPlan = MatchBorderPlan(centerX = 12.0, centerZ = -8.0, size = 100.0)
 
         every { matchFlowService.moveToRunning(any()) } answers { firstArg<GameSession>().apply { state = GameState.RUNNING; pvpEnabled = false } }
@@ -99,6 +105,7 @@ class MatchLifecycleServiceTest {
         val service = MatchLifecycleService(
             plugin = plugin,
             configManager = configManager,
+            worldProvider = worldProvider,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -107,7 +114,9 @@ class MatchLifecycleServiceTest {
             victoryService = victoryService,
             deathMarkerService = deathMarkerService,
             messageService = messageService,
-            matchFlowService = matchFlowService
+            matchFlowService = matchFlowService,
+            matchScopeFactory = matchScopeFactory,
+            matchScopeHolder = matchScopeHolder
         )
 
         val session = GameSession()
@@ -149,6 +158,9 @@ class MatchLifecycleServiceTest {
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
         val configManager = mockConfigManager()
+        val worldProvider = mockWorldProvider()
+        val matchScopeFactory = MatchScopeFactory()
+        val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
         val borderPlan = MatchBorderPlan(centerX = 20.0, centerZ = 40.0, size = 120.0)
         val player = mockPlayer("alpha")
         val spawnWorld = mockk<World>()
@@ -171,6 +183,7 @@ class MatchLifecycleServiceTest {
         val service = MatchLifecycleService(
             plugin = plugin,
             configManager = configManager,
+            worldProvider = worldProvider,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -179,7 +192,9 @@ class MatchLifecycleServiceTest {
             victoryService = victoryService,
             deathMarkerService = deathMarkerService,
             messageService = messageService,
-            matchFlowService = matchFlowService
+            matchFlowService = matchFlowService,
+            matchScopeFactory = matchScopeFactory,
+            matchScopeHolder = matchScopeHolder
         )
 
         service.prepareSpawnLocations(listOf(player))
@@ -205,6 +220,9 @@ class MatchLifecycleServiceTest {
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
         val configManager = mockConfigManager()
+        val worldProvider = mockWorldProvider()
+        val matchScopeFactory = MatchScopeFactory()
+        val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
 
         every { borderManager.stop() } just runs
         every { borderManager.reset(any()) } just runs
@@ -218,6 +236,7 @@ class MatchLifecycleServiceTest {
         val service = MatchLifecycleService(
             plugin = plugin,
             configManager = configManager,
+            worldProvider = worldProvider,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -226,7 +245,9 @@ class MatchLifecycleServiceTest {
             victoryService = victoryService,
             deathMarkerService = deathMarkerService,
             messageService = messageService,
-            matchFlowService = matchFlowService
+            matchFlowService = matchFlowService,
+            matchScopeFactory = matchScopeFactory,
+            matchScopeHolder = matchScopeHolder
         )
 
         val session = GameSession(
@@ -262,6 +283,9 @@ class MatchLifecycleServiceTest {
         val plugin = mockPlugin()
         val scoreboardManager = mockk<ScoreboardManager>()
         val configManager = mockConfigManager()
+        val worldProvider = mockWorldProvider()
+        val matchScopeFactory = MatchScopeFactory()
+        val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
         val winner = mockPlayer("winner")
 
         every { matchFlowService.moveToEnding(any()) } answers { firstArg<GameSession>().state = GameState.ENDING }
@@ -279,6 +303,7 @@ class MatchLifecycleServiceTest {
         val service = MatchLifecycleService(
             plugin = plugin,
             configManager = configManager,
+            worldProvider = worldProvider,
             scoreboardManager = scoreboardManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
@@ -287,7 +312,9 @@ class MatchLifecycleServiceTest {
             victoryService = victoryService,
             deathMarkerService = deathMarkerService,
             messageService = messageService,
-            matchFlowService = matchFlowService
+            matchFlowService = matchFlowService,
+            matchScopeFactory = matchScopeFactory,
+            matchScopeHolder = matchScopeHolder
         )
 
         val session = GameSession(state = GameState.RUNNING, aliveCount = 1)
@@ -305,6 +332,7 @@ class MatchLifecycleServiceTest {
         MatchLifecycleService(
             plugin = mockPlugin(),
             configManager = mockConfigManager(),
+            worldProvider = mockWorldProvider(),
             scoreboardManager = mockk(),
             playerRegistry = playerRegistry,
             playerSetupService = mockk(),
@@ -313,19 +341,28 @@ class MatchLifecycleServiceTest {
             victoryService = mockk(),
             deathMarkerService = mockk(relaxed = true),
             messageService = mockk(),
-            matchFlowService = mockk()
+            matchFlowService = mockk(),
+            matchScopeFactory = MatchScopeFactory(),
+            matchScopeHolder = MatchScopeHolder(MatchScopeFactory().create())
         )
 
     private fun mockConfigManager(): ConfigManager {
         val world = mockk<World>()
         val gameSettings = mockk<GameSettings>()
         val configManager = mockk<ConfigManager>()
-        every { configManager.gameWorld } returns world
         every { configManager.gameSettings } returns gameSettings
         every { gameSettings.hideNameTags } returns false
         every { gameSettings.showPlayerLocatorBar } returns true
         every { gameSettings.disableAdvancementAnnouncements } returns false
         return configManager
+    }
+
+    private fun mockWorldProvider(): GameWorldProvider {
+        val world = mockk<World>(relaxed = true)
+        return mockk {
+            every { require() } returns world
+            every { find() } returns world
+        }
     }
 
     private fun mockPlugin(): JavaPlugin {

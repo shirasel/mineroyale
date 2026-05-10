@@ -9,6 +9,7 @@ import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import me.shirasemaru.mineroyale12111.Mineroyale12111
+import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.BorderSettings
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.EnhancedDamageSettings
@@ -17,8 +18,14 @@ import me.shirasemaru.mineroyale12111.config.GameSettings
 import me.shirasemaru.mineroyale12111.config.PhaseSettings
 import me.shirasemaru.mineroyale12111.config.SpawnSettings
 import me.shirasemaru.mineroyale12111.config.WorldSettings
+import me.shirasemaru.mineroyale12111.game.MatchScopeFactory
+import me.shirasemaru.mineroyale12111.game.MatchScopeHolder
 import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
+import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.game.CountdownService
+import me.shirasemaru.mineroyale12111.service.game.DeathMarkerService
+import me.shirasemaru.mineroyale12111.service.game.MatchFlowService
+import me.shirasemaru.mineroyale12111.service.game.MatchLifecycleService
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import me.shirasemaru.mineroyale12111.service.game.VictoryService
 import me.shirasemaru.mineroyale12111.service.item.EndCrystalService
@@ -120,15 +127,20 @@ class GameManagerStartFlowTest {
         val border = mockBorder()
         val world = mockWorld(border)
         val configManager = mockk<ConfigManager>()
+        val worldProvider = mockk<GameWorldProvider>()
         val playerRegistry = PlayerRegistry()
         val playerSetupService = mockk<PlayerSetupService>()
         val spectatorService = mockk<SpectatorService>(relaxed = true)
         val countdownService = mockk<CountdownService>()
+        val matchFlowService = MatchFlowService()
+        val matchScopeFactory = MatchScopeFactory()
+        val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
         val messageService = mockk<MessageService>(relaxed = true)
         val scoreboardManager = mockk<ScoreboardManager>()
         val victoryService = mockk<VictoryService>(relaxed = true)
         val compassTrackingService = mockk<CompassTrackingService>()
         val endCrystalService = mockk<EndCrystalService>(relaxed = true)
+        val deathMarkerService = mockk<DeathMarkerService>(relaxed = true)
         val borderPlan = MatchBorderPlan(centerX = 24.0, centerZ = -16.0, size = 100.0)
 
         every { plugin.server } returns server
@@ -179,7 +191,8 @@ class GameManagerStartFlowTest {
                 maxDamage = 10.0
             )
         )
-        every { configManager.gameWorld } returns world
+        every { worldProvider.require() } returns world
+        every { worldProvider.find() } returns world
         every { world.worldBorder } returns border
         every { countdownService.cancel(any()) } just runs
         every { playerSetupService.prepareMatchPlayer(any(), any()) } just runs
@@ -189,18 +202,44 @@ class GameManagerStartFlowTest {
         every { border.center } returns Location(world, borderPlan.centerX, 0.0, borderPlan.centerZ)
         every { border.size } returns borderPlan.size
 
-        val gameManager = GameManager(
+        val borderManager = BorderManager(
             plugin = plugin,
+            configManager = configManager,
+            worldProvider = worldProvider,
+            messageService = messageService,
+            onPvpStateChanged = { },
+            aliveProvider = playerRegistry::getAlivePlayers
+        )
+        val matchLifecycleService = MatchLifecycleService(
+            plugin = plugin,
+            configManager = configManager,
+            worldProvider = worldProvider,
+            scoreboardManager = scoreboardManager,
+            playerRegistry = playerRegistry,
+            playerSetupService = playerSetupService,
+            borderManager = borderManager,
+            compassTrackingService = compassTrackingService,
+            victoryService = victoryService,
+            deathMarkerService = deathMarkerService,
+            messageService = messageService,
+            matchFlowService = matchFlowService,
+            matchScopeFactory = matchScopeFactory,
+            matchScopeHolder = matchScopeHolder
+        )
+
+        val gameManager = GameManager(
             configManager = configManager,
             playerRegistry = playerRegistry,
             playerSetupService = playerSetupService,
             spectatorService = spectatorService,
             countdownService = countdownService,
             messageService = messageService,
-            scoreboardManager = scoreboardManager,
-            victoryService = victoryService,
-            compassTrackingService = compassTrackingService,
-            endCrystalService = endCrystalService
+            matchFlowService = matchFlowService,
+            matchLifecycleService = matchLifecycleService,
+            borderManager = borderManager,
+            endCrystalService = endCrystalService,
+            deathMarkerService = deathMarkerService,
+            matchScopeHolder = matchScopeHolder
         )
 
         return StartFlowFixture(
@@ -274,7 +313,8 @@ class GameManagerStartFlowTest {
 }
 
 private fun sessionOf(gameManager: GameManager): GameSession {
-    val field = GameManager::class.java.getDeclaredField("session")
-    field.isAccessible = true
-    return field.get(gameManager) as GameSession
+    val holderField = GameManager::class.java.getDeclaredField("matchScopeHolder")
+    holderField.isAccessible = true
+    val holder = holderField.get(gameManager) as MatchScopeHolder
+    return holder.current.session
 }
