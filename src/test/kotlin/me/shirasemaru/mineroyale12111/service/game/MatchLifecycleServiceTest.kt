@@ -250,12 +250,12 @@ class MatchLifecycleServiceTest {
             matchScopeHolder = matchScopeHolder
         )
 
-        val session = GameSession(
-            state = GameState.RUNNING,
-            participantCount = 4,
-            aliveCount = 2,
+        val session = matchScopeHolder.current.session.apply {
+            state = GameState.RUNNING
+            participantCount = 4
+            aliveCount = 2
             currentPhase = 2
-        )
+        }
 
         service.stopCurrentMatch(session)
 
@@ -317,7 +317,10 @@ class MatchLifecycleServiceTest {
             matchScopeHolder = matchScopeHolder
         )
 
-        val session = GameSession(state = GameState.RUNNING, aliveCount = 1)
+        val session = matchScopeHolder.current.session.apply {
+            state = GameState.RUNNING
+            aliveCount = 1
+        }
 
         service.finishMatch(session, winner)
 
