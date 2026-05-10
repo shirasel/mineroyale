@@ -1,13 +1,15 @@
 package me.shirasemaru.mineroyale12111.game
 
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
-import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale12111.Mineroyale12111
@@ -72,42 +74,38 @@ class GameManagerStartFlowTest {
         val playerB = mockPlayer("bravo")
         val playerA = mockPlayer("alpha")
         val participants = linkedSetOf(playerB, playerA)
-        val onCompletedSlot = slot<(List<Player>) -> Unit>()
+        val countdownResult = CompletableDeferred<CountdownService.CountdownResult>()
 
         every { Bukkit.getOnlinePlayers() } returns participants
         every { Bukkit.getScheduler() } returns fixture.scheduler
-        every {
-            fixture.countdownService.start(
+        coEvery {
+            fixture.countdownService.run(
                 session = any(),
                 seconds = 15,
                 minPlayers = 2,
                 participantProvider = any(),
                 onParticipantsChanged = any(),
-                onTick = any(),
-                onCancelled = any(),
-                onCompleted = capture(onCompletedSlot)
+                onTick = any()
             )
-        } just runs
+        } coAnswers { countdownResult.await() }
 
         fixture.gameManager.startGame()
 
         assertEquals(GameState.COUNTDOWN, fixture.gameManager.getState())
         assertEquals(2, sessionOf(fixture.gameManager).participantCount)
-        verify(exactly = 1) {
-            fixture.countdownService.start(
+        coVerify(exactly = 1) {
+            fixture.countdownService.run(
                 session = any(),
                 seconds = 15,
                 minPlayers = 2,
                 participantProvider = any(),
                 onParticipantsChanged = any(),
-                onTick = any(),
-                onCancelled = any(),
-                onCompleted = any()
+                onTick = any()
             )
         }
         verify(exactly = 0) { fixture.messageService.broadcastGameStarting() }
 
-        onCompletedSlot.captured.invoke(listOf(playerA, playerB))
+        countdownResult.complete(CountdownService.CountdownResult.Completed(listOf(playerA, playerB)))
 
         assertEquals(GameState.RUNNING, fixture.gameManager.getState())
         assertEquals(2, fixture.playerRegistry.aliveCount())

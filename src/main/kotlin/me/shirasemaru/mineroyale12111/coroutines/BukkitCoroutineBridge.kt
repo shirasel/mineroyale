@@ -22,6 +22,13 @@ suspend fun JavaPlugin.nextTick() =
         })
     }
 
+suspend fun JavaPlugin.waitTicks(ticks: Long) =
+    suspendCancellableCoroutine<Unit> { continuation ->
+        server.scheduler.runTaskLater(this, Runnable {
+            continuation.resume(Unit)
+        }, ticks)
+    }
+
 suspend fun JavaPlugin.awaitChunkPreload(locations: Collection<Location>) =
     suspendCancellableCoroutine<Unit> { continuation ->
         val futures = locations

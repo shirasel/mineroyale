@@ -1,6 +1,7 @@
 package me.shirasemaru.mineroyale12111.game
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.bukkit.plugin.java.JavaPlugin
 import me.shirasemaru.mineroyale12111.config.ConfigManager
@@ -68,7 +69,16 @@ class GameManager(
         ) {
             MatchFlowService.StartCheckResult.Ready -> {
                 matchFlowService.moveToCountdown(session)
-                startCountdown()
+                coroutineScope.launch {
+                    try {
+                        startCountdown()
+                    } catch (_: CancellationException) {
+                    } catch (error: Throwable) {
+                        plugin.logger.severe("Failed to start match: ${error.message}")
+                        error.printStackTrace()
+                        matchFlowService.cancelCountdown(session)
+                    }
+                }
             }
 
             MatchFlowService.StartCheckResult.AlreadyInProgress -> return
@@ -91,10 +101,11 @@ class GameManager(
         matchLifecycleService.stopCurrentMatch(session)
     }
 
-    private fun startCountdown() {
+    private suspend fun startCountdown() {
         matchLifecycleService.prepareSpawnLocations(matchLifecycleService.getEligiblePlayers())
 
-        countdownService.start(
+        when (
+            val result = countdownService.run(
             session = session,
             seconds = configManager.gameSettings.countdownSeconds,
             minPlayers = configManager.gameSettings.minPlayers,
@@ -104,30 +115,25 @@ class GameManager(
                 if (time <= 5 || time % 10 == 0) {
                     messageService.broadcastCountdown(time, players)
                 }
-            },
-            onCancelled = {
+            }
+        )) {
+            is CountdownService.CountdownResult.Cancelled -> {
                 matchLifecycleService.discardPreparedSpawnLocations()
                 messageService.broadcastCountdownCancelled()
                 matchFlowService.cancelCountdown(session)
-            },
-            onCompleted = { players ->
-                messageService.broadcastGameStarting()
-                coroutineScope.launch {
-                    runCatching {
-                        matchLifecycleService.startMatch(
-                            session = session,
-                            players = players,
-                            onPlayersReady = { endCrystalService.distribute(players) },
-                            onMatchComplete = { endGame(null) }
-                        )
-                    }.onFailure { error ->
-                        plugin.logger.severe("Failed to start match: ${error.message}")
-                        error.printStackTrace()
-                        matchFlowService.cancelCountdown(session)
-                    }
-                }
             }
-        )
+
+            is CountdownService.CountdownResult.Completed -> {
+                val players = result.participants
+                messageService.broadcastGameStarting()
+                matchLifecycleService.startMatch(
+                    session = session,
+                    players = players,
+                    onPlayersReady = { endCrystalService.distribute(players) },
+                    onMatchComplete = { endGame(null) }
+                )
+            }
+        }
     }
 
     fun endGame(winner: Player?) {

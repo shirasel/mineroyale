@@ -1,67 +1,78 @@
 package me.shirasemaru.mineroyale12111.service.game
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import me.shirasemaru.mineroyale12111.coroutines.waitTicks
 import me.shirasemaru.mineroyale12111.game.GameSession
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 
 class CountdownService(
     private val plugin: JavaPlugin
 ) {
 
-    private var countdownTask: BukkitTask? = null
+    sealed interface CountdownResult {
+        data class Cancelled(val participants: List<Player>) : CountdownResult
+        data class Completed(val participants: List<Player>) : CountdownResult
+    }
 
-    fun start(
+    private var countdownJob: Job? = null
+
+    suspend fun run(
         session: GameSession,
         seconds: Int,
         minPlayers: Int,
         participantProvider: () -> List<Player>,
         onParticipantsChanged: (List<Player>) -> Unit,
-        onTick: (Int, List<Player>) -> Unit,
-        onCancelled: (List<Player>) -> Unit,
-        onCompleted: (List<Player>) -> Unit
-    ) {
+        onTick: (Int, List<Player>) -> Unit
+    ): CountdownResult {
         cancel(session)
+
+        val currentJob = currentCoroutineContext()[Job]
+        countdownJob = currentJob
 
         var time = seconds
         var lastParticipantIds: List<UUID>? = null
         session.countdownRemainingSeconds = seconds
 
-        countdownTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
-            val participants = participantProvider()
-            val participantIds = participants.map(Player::getUniqueId)
-            session.participantCount = participants.size
+        try {
+            while (true) {
+                val participants = participantProvider()
+                val participantIds = participants.map(Player::getUniqueId)
+                session.participantCount = participants.size
 
-            if (lastParticipantIds != participantIds) {
-                onParticipantsChanged(participants)
-                lastParticipantIds = participantIds
+                if (lastParticipantIds != participantIds) {
+                    onParticipantsChanged(participants)
+                    lastParticipantIds = participantIds
+                }
+
+                if (participants.size < minPlayers) {
+                    return CountdownResult.Cancelled(participants)
+                }
+
+                if (time <= 0) {
+                    return CountdownResult.Completed(participants)
+                }
+
+                session.countdownRemainingSeconds = time
+                onTick(time, participants)
+                time--
+                plugin.waitTicks(20L)
             }
-
-            if (participants.size < minPlayers) {
-                cancel(session)
-                onCancelled(participants)
-                return@Runnable
+        } finally {
+            if (countdownJob == currentJob) {
+                countdownJob = null
             }
-
-            if (time <= 0) {
-                cancel(session)
-                onCompleted(participants)
-                return@Runnable
-            }
-
-            session.countdownRemainingSeconds = time
-            onTick(time, participants)
-            time--
-        }, 0L, 20L)
+            session.countdownRemainingSeconds = 0
+        }
     }
 
     fun cancel(session: GameSession? = null) {
-        countdownTask?.cancel()
-        countdownTask = null
+        countdownJob?.cancel()
+        countdownJob = null
         session?.countdownRemainingSeconds = 0
     }
 
-    fun isRunning(): Boolean = countdownTask != null
+    fun isRunning(): Boolean = countdownJob != null
 }
