@@ -1,21 +1,27 @@
 package me.shirasemaru.mineroyale12111.service.border
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.PhaseSettings
+import me.shirasemaru.mineroyale12111.coroutines.waitTicks
 import me.shirasemaru.mineroyale12111.game.GameSession
 import me.shirasemaru.mineroyale12111.game.PhaseState
 import me.shirasemaru.mineroyale12111.service.game.MessageService
 import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
 import kotlin.random.Random
 
 class BorderService(
     private val plugin: JavaPlugin,
     private val configManager: ConfigManager,
     private val messageService: MessageService,
-    private val onPvpStateChanged: (Boolean) -> Unit
+    private val onPvpStateChanged: (Boolean) -> Unit,
+    private val coroutineScope: CoroutineScope
 ) {
 
     private companion object {
@@ -23,11 +29,9 @@ class BorderService(
         const val FINAL_MOVE_UPDATE_INTERVAL_TICKS = 2L
     }
 
-    private var shrinkTask: BukkitTask? = null
-    private var waitTask: BukkitTask? = null
-    private var moveTask: BukkitTask? = null
-    private var phaseCountdownTask: BukkitTask? = null
-    private var graceTask: BukkitTask? = null
+    private var phasesJob: Job? = null
+    private var phaseCountdownJob: Job? = null
+    private var graceJob: Job? = null
 
     private var pvpEnabled = false
     private var gameEndTime: Long = 0
@@ -67,15 +71,19 @@ class BorderService(
     }
 
     fun runPhases(session: GameSession, border: WorldBorder, onComplete: () -> Unit) {
-        runPhase(session, border, configManager.borderSettings.phases, 0, onComplete)
+        phasesJob?.cancel()
+        phasesJob = coroutineScope.launch {
+            runPhase(session, border, configManager.borderSettings.phases, 0, onComplete)
+        }
     }
 
     fun stop() {
-        shrinkTask?.cancel()
-        waitTask?.cancel()
-        moveTask?.cancel()
-        phaseCountdownTask?.cancel()
-        graceTask?.cancel()
+        phasesJob?.cancel()
+        phasesJob = null
+        phaseCountdownJob?.cancel()
+        phaseCountdownJob = null
+        graceJob?.cancel()
+        graceJob = null
     }
 
     fun reset(session: GameSession, border: WorldBorder) {
@@ -118,21 +126,30 @@ class BorderService(
         onPvpStateChanged(false)
         messageService.broadcastPvpGracePeriod(configManager.gameSettings.initialPvpGraceSeconds)
 
-        graceTask?.cancel()
-        graceTask = plugin.server.scheduler.runTaskLater(plugin, Runnable {
+        graceJob?.cancel()
+        graceJob = coroutineScope.launch {
+            plugin.waitTicks(configManager.gameSettings.initialPvpGraceSeconds * 20L)
+            if (!currentCoroutineContext().isActive) {
+                return@launch
+            }
+
             pvpEnabled = true
             onPvpStateChanged(true)
             messageService.broadcastPvpEnabled(world.players)
-        }, configManager.gameSettings.initialPvpGraceSeconds * 20L)
+        }
     }
 
-    private fun runPhase(
+    private suspend fun runPhase(
         session: GameSession,
         border: WorldBorder,
         phases: List<PhaseSettings>,
         index: Int,
         onComplete: () -> Unit
     ) {
+        if (!currentCoroutineContext().isActive) {
+            return
+        }
+
         if (index >= phases.size) {
             if (configManager.borderSettings.finalPhase.enabled) {
                 startFinalMove(session, border)
@@ -150,17 +167,16 @@ class BorderService(
         if (phase.waitSeconds > 0) {
             session.phaseState = PhaseState.PREPARING.displayName
             startPhaseCountdown(session, phase.waitSeconds)
-
-            waitTask?.cancel()
-            waitTask = plugin.server.scheduler.runTaskLater(plugin, Runnable {
-                startShrinkPhase(session, border, phases, index, onComplete)
-            }, phase.waitSeconds * 20L)
-        } else {
-            startShrinkPhase(session, border, phases, index, onComplete)
+            plugin.waitTicks(phase.waitSeconds * 20L)
+            if (!currentCoroutineContext().isActive) {
+                return
+            }
         }
+
+        startShrinkPhase(session, border, phases, index, onComplete)
     }
 
-    private fun startShrinkPhase(
+    private suspend fun startShrinkPhase(
         session: GameSession,
         border: WorldBorder,
         phases: List<PhaseSettings>,
@@ -177,16 +193,14 @@ class BorderService(
         }
     }
 
-    private fun startShrink(
+    private suspend fun startShrink(
         session: GameSession,
         border: WorldBorder,
         start: Double,
         end: Double,
         seconds: Long,
-        onFinish: () -> Unit
+        onFinish: suspend () -> Unit
     ) {
-        shrinkTask?.cancel()
-
         if (seconds <= 0) {
             border.size = end
             updateRemainingGameSeconds(session)
@@ -202,23 +216,25 @@ class BorderService(
 
         var current = start
         var count = 0L
-
-        shrinkTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            if (count >= steps) {
-                border.size = end
-                shrinkTask?.cancel()
-                updateRemainingGameSeconds(session)
-                onFinish()
-                return@Runnable
-            }
-
+        while (count < steps && currentCoroutineContext().isActive) {
             current -= perUpdate
             border.size = current
             count++
-        }, 0L, updateInterval)
+            if (count < steps) {
+                plugin.waitTicks(updateInterval)
+            }
+        }
+
+        if (!currentCoroutineContext().isActive) {
+            return
+        }
+
+        border.size = end
+        updateRemainingGameSeconds(session)
+        onFinish()
     }
 
-    private fun startFinalMove(session: GameSession, border: WorldBorder) {
+    private suspend fun startFinalMove(session: GameSession, border: WorldBorder) {
         val range = configManager.borderSettings.finalPhase.moveRange
         val duration = configManager.borderSettings.finalPhase.moveDurationSeconds
 
@@ -229,52 +245,49 @@ class BorderService(
         val totalTicks = duration * 20L
         val updateInterval = FINAL_MOVE_UPDATE_INTERVAL_TICKS
         val steps = ((totalTicks + updateInterval - 1) / updateInterval).toInt()
-        var count = 0
-        var moveX = 0.0
-        var moveZ = 0.0
-        moveTask?.cancel()
         session.phaseState = PhaseState.FINAL_MOVING.displayName
+        messageService.broadcastFinalMoveStarted()
 
-        fun chooseNextTarget() {
+        while (currentCoroutineContext().isActive) {
             val start = border.center
             val targetX = start.x + Random.nextDouble(-range, range)
             val targetZ = start.z + Random.nextDouble(-range, range)
-            moveX = (targetX - start.x) / steps.toDouble()
-            moveZ = (targetZ - start.z) / steps.toDouble()
-            count = 0
+            val moveX = (targetX - start.x) / steps.toDouble()
+            val moveZ = (targetZ - start.z) / steps.toDouble()
+
             startPhaseCountdown(session, duration)
-        }
 
-        chooseNextTarget()
+            repeat(steps) { step ->
+                if (!currentCoroutineContext().isActive) {
+                    return
+                }
 
-        moveTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            if (count >= steps) {
-                updateRemainingGameSeconds(session)
-                chooseNextTarget()
-                return@Runnable
+                val center = border.center
+                border.setCenter(center.x + moveX, center.z + moveZ)
+                if (step < steps - 1) {
+                    plugin.waitTicks(updateInterval)
+                }
             }
 
-            val center = border.center
-            border.setCenter(center.x + moveX, center.z + moveZ)
-            count++
-        }, 0L, updateInterval)
-
-        messageService.broadcastFinalMoveStarted()
+            updateRemainingGameSeconds(session)
+        }
     }
 
     private fun startPhaseCountdown(session: GameSession, seconds: Int) {
-        phaseCountdownTask?.cancel()
+        phaseCountdownJob?.cancel()
         session.remainingPhaseSeconds = seconds
         updateRemainingGameSeconds(session)
 
-        phaseCountdownTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            if (session.remainingPhaseSeconds <= 0) {
-                phaseCountdownTask?.cancel()
-                return@Runnable
-            }
+        phaseCountdownJob = coroutineScope.launch {
+            repeat(seconds) {
+                plugin.waitTicks(20L)
+                if (!currentCoroutineContext().isActive) {
+                    return@launch
+                }
 
-            session.remainingPhaseSeconds--
-            updateRemainingGameSeconds(session)
-        }, 20L, 20L)
+                session.remainingPhaseSeconds--
+                updateRemainingGameSeconds(session)
+            }
+        }
     }
 }

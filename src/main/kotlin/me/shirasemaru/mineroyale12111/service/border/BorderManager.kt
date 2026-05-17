@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale12111.service.border
 
+import kotlinx.coroutines.CoroutineScope
 import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.game.GameSession
@@ -14,10 +15,11 @@ class BorderManager(
     private val worldProvider: GameWorldProvider,
     messageService: MessageService,
     onPvpStateChanged: (Boolean) -> Unit,
-    private val aliveProvider: () -> List<Player>
+    private val aliveProvider: () -> List<Player>,
+    coroutineScope: CoroutineScope
 ) {
 
-    private val borderService = BorderService(plugin, configManager, messageService, onPvpStateChanged)
+    private val borderService = BorderService(plugin, configManager, messageService, onPvpStateChanged, coroutineScope)
     private val spawnPointService = SpawnPointService(configManager, worldProvider)
     private val borderDamageService = BorderDamageService(plugin, configManager)
 

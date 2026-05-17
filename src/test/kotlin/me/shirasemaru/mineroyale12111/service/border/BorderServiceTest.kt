@@ -5,6 +5,8 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale12111.config.BorderSettings
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.EnhancedDamageSettings
@@ -66,7 +68,7 @@ class BorderServiceTest {
         )
         val messageService = mockk<MessageService>(relaxed = true)
         val pvpChanges = mutableListOf<Boolean>()
-        val service = BorderService(plugin, configManager, messageService) { pvpChanges += it }
+        val service = BorderService(plugin, configManager, messageService, { pvpChanges += it }, CoroutineScope(Dispatchers.Unconfined))
         val border = mockBorder(initialSize = 100.0)
         val world = mockWorld()
         val session = GameSession(
@@ -129,7 +131,7 @@ class BorderServiceTest {
         )
         val messageService = mockk<MessageService>(relaxed = true)
         val pvpChanges = mutableListOf<Boolean>()
-        val service = BorderService(plugin, configManager, messageService) { pvpChanges += it }
+        val service = BorderService(plugin, configManager, messageService, { pvpChanges += it }, CoroutineScope(Dispatchers.Unconfined))
         val border = mockBorder(initialSize = 100.0)
         val world = mockWorld(activePlayers)
         val session = GameSession()
@@ -160,7 +162,7 @@ class BorderServiceTest {
             )
         )
         val messageService = mockk<MessageService>(relaxed = true)
-        val service = BorderService(plugin, configManager, messageService) { }
+        val service = BorderService(plugin, configManager, messageService, { }, CoroutineScope(Dispatchers.Unconfined))
         val border = mockBorder(initialSize = 100.0)
         val session = GameSession()
         var completed = false
@@ -201,7 +203,7 @@ class BorderServiceTest {
             )
         )
         val messageService = mockk<MessageService>(relaxed = true)
-        val service = BorderService(plugin, configManager, messageService) { }
+        val service = BorderService(plugin, configManager, messageService, { }, CoroutineScope(Dispatchers.Unconfined))
         val border = mockBorder(initialSize = 100.0, initialCenterX = 0.0, initialCenterZ = 0.0)
         val session = GameSession()
         var completed = false

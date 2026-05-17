@@ -56,6 +56,8 @@ tasks.assemble {
 
 tasks.test {
     useJUnitPlatform()
+    val testRunId = providers.gradleProperty("testRunId").orNull ?: "default"
+    binaryResultsDirectory.set(layout.buildDirectory.dir("test-results-jvm/$testRunId/binary"))
 }
 
 tasks.processResources {

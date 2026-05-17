@@ -1,5 +1,7 @@
 package me.shirasemaru.mineroyale12111.service.game
 
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -301,9 +303,7 @@ class MatchLifecycleServiceTest {
         every { scoreboardManager.clear() } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { playerRegistry.clear() } just runs
-        every { victoryService.playVictory(winner, any()) } answers {
-            secondArg<() -> Unit>().invoke()
-        }
+        coEvery { victoryService.playVictory(winner) } just runs
 
         val service = MatchLifecycleService(
             plugin = plugin,
@@ -327,10 +327,12 @@ class MatchLifecycleServiceTest {
             aliveCount = 1
         }
 
-        service.finishMatch(session, winner)
+        runBlocking {
+            service.finishMatch(session, winner)
+        }
 
         assertEquals(GameState.WAITING, session.state)
-        verify { victoryService.playVictory(winner, any()) }
+        coVerify { victoryService.playVictory(winner) }
         verify(exactly = 0) { messageService.broadcastNoWinner() }
         verify { scoreboardManager.clear() }
         verify { playerRegistry.clear() }

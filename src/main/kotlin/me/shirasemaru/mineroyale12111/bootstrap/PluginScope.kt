@@ -69,7 +69,8 @@ class PluginScope private constructor(
                 worldProvider = worldProvider,
                 messageService = messageService,
                 onPvpStateChanged = { matchScopeHolder.current.session.pvpEnabled = it },
-                aliveProvider = playerRegistry::getAlivePlayers
+                aliveProvider = playerRegistry::getAlivePlayers,
+                coroutineScope = coroutineScope
             )
             val matchLifecycleService = MatchLifecycleService(
                 plugin = plugin,

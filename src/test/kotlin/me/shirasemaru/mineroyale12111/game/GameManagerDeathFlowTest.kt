@@ -1,5 +1,7 @@
 package me.shirasemaru.mineroyale12111.game
 
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -73,7 +75,7 @@ class GameManagerDeathFlowTest {
         verify(exactly = 1) { fixture.spectatorService.applySpectatorMode(eliminated) }
         verify(exactly = 1) { fixture.deathMarkerService.spawnMarker(eliminated, deathLocation) }
         verify(exactly = 1) { fixture.messageService.broadcastPlayerEliminated("eliminated", 2) }
-        verify(exactly = 0) { fixture.victoryService.playVictory(any(), any()) }
+        coVerify(exactly = 0) { fixture.victoryService.playVictory(any()) }
     }
 
     @Test
@@ -102,7 +104,7 @@ class GameManagerDeathFlowTest {
         verify(exactly = 1) { fixture.spectatorService.applySpectatorMode(eliminated) }
         verify(exactly = 1) { fixture.deathMarkerService.spawnMarker(eliminated, deathLocation) }
         verify(exactly = 1) { fixture.messageService.broadcastPlayerEliminated("eliminated", 1) }
-        verify(exactly = 1) { fixture.victoryService.playVictory(winner, any()) }
+        coVerify(exactly = 1) { fixture.victoryService.playVictory(winner) }
         verify(exactly = 1) { fixture.playerSetupService.resetAllOnlinePlayersToLobby() }
         verify(exactly = 1) { fixture.scoreboardManager.clear() }
         verify(exactly = 1) { fixture.compassTrackingService.stop() }
@@ -147,9 +149,7 @@ class GameManagerDeathFlowTest {
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
         every { compassTrackingService.stop() } just runs
         every { deathMarkerService.spawnMarker(any(), any()) } just runs
-        every { victoryService.playVictory(any(), any()) } answers {
-            secondArg<() -> Unit>().invoke()
-        }
+        coEvery { victoryService.playVictory(any()) } just runs
 
         val borderManager = BorderManager(
             plugin = plugin,
@@ -157,7 +157,8 @@ class GameManagerDeathFlowTest {
             worldProvider = worldProvider,
             messageService = messageService,
             onPvpStateChanged = { },
-            aliveProvider = playerRegistry::getAlivePlayers
+            aliveProvider = playerRegistry::getAlivePlayers,
+            coroutineScope = coroutineScope
         )
         val matchLifecycleService = MatchLifecycleService(
             plugin = plugin,

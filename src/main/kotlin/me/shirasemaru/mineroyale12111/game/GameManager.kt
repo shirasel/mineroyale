@@ -141,7 +141,15 @@ class GameManager(
 
         matchLifecycleService.setVictoryRespawnLocation(winner?.location?.clone()?.add(0.0, 1.0, 0.0))
         countdownService.cancel(session)
-        matchLifecycleService.finishMatch(session, winner)
+        coroutineScope.launch {
+            try {
+                matchLifecycleService.finishMatch(session, winner)
+            } catch (_: CancellationException) {
+            } catch (error: Throwable) {
+                plugin.logger.severe("Failed to finish match: ${error.message}")
+                error.printStackTrace()
+            }
+        }
     }
 
     fun handlePlayerDeath(player: Player, deathLocation: Location? = null) {

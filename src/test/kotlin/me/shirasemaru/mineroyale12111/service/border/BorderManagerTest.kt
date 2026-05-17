@@ -5,6 +5,8 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale12111.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale12111.config.BorderSettings
 import me.shirasemaru.mineroyale12111.config.ConfigManager
@@ -50,7 +52,7 @@ class BorderManagerTest {
         val worldProvider = mockWorldProvider(world)
         val messageService = mockk<MessageService>(relaxed = true)
         val pvpChanges = mutableListOf<Boolean>()
-        val manager = BorderManager(plugin, configManager, worldProvider, messageService, { pvpChanges += it }) { listOf(outsidePlayer) }
+        val manager = BorderManager(plugin, configManager, worldProvider, messageService, { pvpChanges += it }, { listOf(outsidePlayer) }, CoroutineScope(Dispatchers.Unconfined))
         val session = GameSession()
 
         manager.initialize(session)
@@ -83,7 +85,7 @@ class BorderManagerTest {
         val configManager = mockConfigManager(world)
         val worldProvider = mockWorldProvider(world)
         val messageService = mockk<MessageService>(relaxed = true)
-        val manager = BorderManager(plugin, configManager, worldProvider, messageService, { }) { listOf(outsidePlayer) }
+        val manager = BorderManager(plugin, configManager, worldProvider, messageService, { }, { listOf(outsidePlayer) }, CoroutineScope(Dispatchers.Unconfined))
         val session = GameSession(
             currentPhase = 2,
             totalPhases = 4,

@@ -7,6 +7,10 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import net.kyori.adventure.title.Title
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -17,10 +21,11 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class VictoryServiceTest {
@@ -49,40 +54,51 @@ class VictoryServiceTest {
             mockPlayer("echo", world)
         )
         val onlinePlayers = listOf(winner) + others
-        var finished = false
+        val teleportCalls = mutableListOf<String>()
+        val started = CountDownLatch(1)
+        var failure: Throwable? = null
 
         every { Bukkit.getScheduler() } returns scheduler
-        every { Bukkit.getOnlinePlayers() } returns onlinePlayers.toSet()
+        every { Bukkit.getOnlinePlayers() } returns onlinePlayers
         every { plugin.server } returns server
         every { server.scheduler } returns scheduler
-        every { messageService.broadcastVictory("winner") } just runs
+        every { messageService.broadcastVictory("winner") } answers { started.countDown() }
         every { messageService.victoryTitle("winner") } returns mockk<Title>()
         every { world.spawn(any<Location>(), Firework::class.java) } returns mockFirework()
+        onlinePlayers.forEach { player ->
+            every { player.teleport(any<Location>()) } answers {
+                teleportCalls += player.name
+                true
+            }
+        }
 
         val service = VictoryService(plugin, messageService)
 
-        service.playVictory(winner) { finished = true }
+        val job = CoroutineScope(Dispatchers.Unconfined).launch {
+            try {
+                service.playVictory(winner)
+            } catch (error: Throwable) {
+                failure = error
+            }
+        }
+        assertTrue(started.await(1, TimeUnit.SECONDS))
 
-        schedulerDriver.advanceTicks(1)
+        schedulerDriver.advanceTicks(90)
+        runBlocking {
+            job.join()
+        }
 
-        verify(exactly = 1) { winner.teleport(any<Location>()) }
-        verify(exactly = 1) { others[0].teleport(any<Location>()) }
-        verify(exactly = 1) { others[1].teleport(any<Location>()) }
-        verify(exactly = 1) { others[2].teleport(any<Location>()) }
-        verify(exactly = 0) { others[3].teleport(any<Location>()) }
-        verify(exactly = 0) { others[4].teleport(any<Location>()) }
-        assertFalse(finished)
-
-        schedulerDriver.advanceTicks(2)
-
-        verify(exactly = 1) { others[3].teleport(any<Location>()) }
-        verify(exactly = 1) { others[4].teleport(any<Location>()) }
-        assertFalse(finished)
-
-        schedulerDriver.advanceTicks(60)
-
-        assertTrue(finished)
+        assertNull(failure)
         verify(exactly = 1) { messageService.broadcastVictory("winner") }
+        val expectedTeleportTargets = onlinePlayers.map { player -> player.name }
+        assertTrue(
+            teleportCalls.containsAll(expectedTeleportTargets),
+            "Expected teleport targets $expectedTeleportTargets but got $teleportCalls"
+        )
+        assertTrue(
+            teleportCalls.size == onlinePlayers.size,
+            "Expected ${onlinePlayers.size} teleport calls but got ${teleportCalls.size}: $teleportCalls"
+        )
         verify(exactly = 3) { world.spawn(any<Location>(), Firework::class.java) }
     }
 

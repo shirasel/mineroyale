@@ -120,15 +120,14 @@ class MatchLifecycleService(
         resetGame(session)
     }
 
-    fun finishMatch(session: GameSession, winner: Player?) {
+    suspend fun finishMatch(session: GameSession, winner: Player?) {
         matchFlowService.moveToEnding(session)
         stopRealtimeSystems()
         borderManager.reset(session)
 
         if (winner != null && winner.isOnline) {
-            victoryService.playVictory(winner) {
-                resetGame(session)
-            }
+            victoryService.playVictory(winner)
+            resetGame(session)
         } else {
             messageService.broadcastNoWinner()
             resetGame(session)

@@ -209,7 +209,8 @@ class GameManagerStartFlowTest {
             worldProvider = worldProvider,
             messageService = messageService,
             onPvpStateChanged = { },
-            aliveProvider = playerRegistry::getAlivePlayers
+            aliveProvider = playerRegistry::getAlivePlayers,
+            coroutineScope = coroutineScope
         )
         val matchLifecycleService = MatchLifecycleService(
             plugin = plugin,

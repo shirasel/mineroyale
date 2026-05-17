@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale12111.service.game
 
+import me.shirasemaru.mineroyale12111.coroutines.waitTicks
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.FireworkEffect
@@ -7,7 +8,6 @@ import org.bukkit.Location
 import org.bukkit.entity.Firework
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
 
 class VictoryService(
     private val plugin: JavaPlugin,
@@ -22,47 +22,41 @@ class VictoryService(
         const val RESET_DELAY_AFTER_EFFECTS_TICKS = 60L
     }
 
-    fun playVictory(winner: Player, onFinished: () -> Unit) {
+    suspend fun playVictory(winner: Player) {
         messageService.broadcastVictory(winner.name)
 
         val title = messageService.victoryTitle(winner.name)
         Bukkit.getOnlinePlayers().forEach { it.showTitle(title) }
 
         val location = winner.location.clone().add(0.0, 1.0, 0.0)
-        teleportPlayersInBatches(Bukkit.getOnlinePlayers().toList(), location) {
-            scheduleFireworks(winner)
-            Bukkit.getScheduler().runTaskLater(plugin, Runnable { onFinished() }, RESET_DELAY_AFTER_EFFECTS_TICKS)
-        }
+        teleportPlayersInBatches(Bukkit.getOnlinePlayers().toList(), location)
+        scheduleFireworks(winner)
+        plugin.waitTicks(RESET_DELAY_AFTER_EFFECTS_TICKS)
     }
 
-    private fun teleportPlayersInBatches(players: List<Player>, location: Location, onComplete: () -> Unit) {
+    private suspend fun teleportPlayersInBatches(players: List<Player>, location: Location) {
         if (players.isEmpty()) {
-            onComplete()
             return
         }
 
         var index = 0
-        var task: BukkitTask? = null
-        task = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+        while (index < players.size) {
             players.drop(index).take(TELEPORT_BATCH_SIZE).forEach { player ->
                 player.teleport(location)
             }
-
             index += TELEPORT_BATCH_SIZE
-            if (index >= players.size) {
-                task?.cancel()
-                onComplete()
+            if (index < players.size) {
+                plugin.waitTicks(TELEPORT_BATCH_INTERVAL_TICKS)
             }
-        }, 0L, TELEPORT_BATCH_INTERVAL_TICKS)
+        }
     }
 
-    private fun scheduleFireworks(winner: Player) {
+    private suspend fun scheduleFireworks(winner: Player) {
         repeat(FIREWORK_COUNT) { index ->
-            Bukkit.getScheduler().runTaskLater(
-                plugin,
-                Runnable { spawnFirework(winner) },
-                index * FIREWORK_INTERVAL_TICKS
-            )
+            if (index > 0) {
+                plugin.waitTicks(FIREWORK_INTERVAL_TICKS)
+            }
+            spawnFirework(winner)
         }
     }
 
