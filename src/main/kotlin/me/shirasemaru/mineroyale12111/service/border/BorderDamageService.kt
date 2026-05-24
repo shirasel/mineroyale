@@ -1,20 +1,26 @@
 package me.shirasemaru.mineroyale12111.service.border
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import me.shirasemaru.mineroyale12111.config.ConfigManager
-import org.bukkit.entity.Player
+import me.shirasemaru.mineroyale12111.coroutines.waitTicks
 import org.bukkit.World
 import org.bukkit.WorldBorder
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import kotlin.math.abs
 
 class BorderDamageService(
     private val plugin: JavaPlugin,
-    private val configManager: ConfigManager
+    private val configManager: ConfigManager,
+    private val coroutineScope: CoroutineScope
 ) {
 
-    private var damageTask: BukkitTask? = null
+    private var damageJob: Job? = null
     private val outsideTime = mutableMapOf<UUID, Int>()
     private val trackedPlayers = linkedSetOf<UUID>()
 
@@ -25,35 +31,13 @@ class BorderDamageService(
     ) {
         stop()
 
-        damageTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            val alivePlayers = aliveProvider()
-            val aliveById = alivePlayers.associateBy(Player::getUniqueId)
-
-            trackedPlayers.toList().forEach { uuid ->
-                val player = aliveById[uuid]
-                if (player == null || !isOutsideBorder(player.location, border)) {
-                    trackedPlayers.remove(uuid)
-                    outsideTime.remove(uuid)
-                    return@forEach
-                }
-
-                if (!configManager.borderSettings.enhancedDamage.enabled) {
-                    player.damage(1.0)
-                    return@forEach
-                }
-
-                val time = outsideTime.getOrDefault(uuid, 0) + 2
-                outsideTime[uuid] = time
-
-                val damage = minOf(
-                    configManager.borderSettings.enhancedDamage.baseDamage +
-                        configManager.borderSettings.enhancedDamage.increasePerSecond * time,
-                    configManager.borderSettings.enhancedDamage.maxDamage
-                )
-
-                player.damage(damage)
+        damageJob = coroutineScope.launch {
+            plugin.waitTicks(40L)
+            while (currentCoroutineContext().isActive) {
+                tickDamage(border, aliveProvider)
+                plugin.waitTicks(40L)
             }
-        }, 40L, 40L)
+        }
     }
 
     fun observePlayer(player: Player, border: WorldBorder, isAlive: Boolean) {
@@ -68,10 +52,43 @@ class BorderDamageService(
     }
 
     fun stop() {
-        damageTask?.cancel()
-        damageTask = null
+        damageJob?.cancel()
+        damageJob = null
         outsideTime.clear()
         trackedPlayers.clear()
+    }
+
+    private fun tickDamage(
+        border: WorldBorder,
+        aliveProvider: () -> List<Player>
+    ) {
+        val alivePlayers = aliveProvider()
+        val aliveById = alivePlayers.associateBy(Player::getUniqueId)
+
+        trackedPlayers.toList().forEach { uuid ->
+            val player = aliveById[uuid]
+            if (player == null || !isOutsideBorder(player.location, border)) {
+                trackedPlayers.remove(uuid)
+                outsideTime.remove(uuid)
+                return@forEach
+            }
+
+            if (!configManager.borderSettings.enhancedDamage.enabled) {
+                player.damage(1.0)
+                return@forEach
+            }
+
+            val time = outsideTime.getOrDefault(uuid, 0) + 2
+            outsideTime[uuid] = time
+
+            val damage = minOf(
+                configManager.borderSettings.enhancedDamage.baseDamage +
+                    configManager.borderSettings.enhancedDamage.increasePerSecond * time,
+                configManager.borderSettings.enhancedDamage.maxDamage
+            )
+
+            player.damage(damage)
+        }
     }
 
     private fun isOutsideBorder(location: org.bukkit.Location, border: WorldBorder): Boolean {

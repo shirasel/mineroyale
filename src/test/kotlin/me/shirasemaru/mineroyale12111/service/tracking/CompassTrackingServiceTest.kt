@@ -4,6 +4,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.GameSettings
 import org.bukkit.Location
@@ -24,38 +26,40 @@ class CompassTrackingServiceTest {
         val scheduler = mockk<BukkitScheduler>(relaxed = true)
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = false)
+            configManager = mockConfigManager(showPlayerLocatorBar = false),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
         service.start { emptyList() }
 
-        verify(exactly = 0) { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), any<Long>(), any<Long>()) }
+        verify(exactly = 0) { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) }
     }
 
     @Test
-    fun `start schedules locator updates when enabled in config`() {
+    fun `start schedules next locator update when enabled in config`() {
         val scheduler = mockk<BukkitScheduler>()
-        every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), any<Long>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
+        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
 
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = true)
+            configManager = mockConfigManager(showPlayerLocatorBar = true),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
         service.start { emptyList() }
 
-        verify(exactly = 1) { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 40L) }
+        verify(exactly = 1) { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), 40L) }
     }
 
     @Test
     fun `locator updates are skipped when alive players exceed configured maximum`() {
         val scheduler = mockk<BukkitScheduler>()
-        val runnable = slot<Runnable>()
-        every { scheduler.runTaskTimer(any<JavaPlugin>(), capture(runnable), any<Long>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
+        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
 
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = true, playerLocatorMaxAlivePlayers = 3)
+            configManager = mockConfigManager(showPlayerLocatorBar = true, playerLocatorMaxAlivePlayers = 3),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
         val world = mockk<World>()
 
@@ -67,7 +71,6 @@ class CompassTrackingServiceTest {
         )
 
         service.start { players }
-        runnable.captured.run()
 
         players.forEach { player ->
             verify(exactly = 0) { player.compassTarget = any() }
@@ -77,12 +80,12 @@ class CompassTrackingServiceTest {
     @Test
     fun `locator updates nearest target when alive players are within configured maximum`() {
         val scheduler = mockk<BukkitScheduler>()
-        val runnable = slot<Runnable>()
-        every { scheduler.runTaskTimer(any<JavaPlugin>(), capture(runnable), any<Long>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
+        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
 
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = true, playerLocatorMaxAlivePlayers = 3)
+            configManager = mockConfigManager(showPlayerLocatorBar = true, playerLocatorMaxAlivePlayers = 3),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
         val world = mockk<World>()
 
@@ -94,7 +97,6 @@ class CompassTrackingServiceTest {
         val charlie = mockPlayer("charlie", world, 30.0, 0.0, charlieTarget)
 
         service.start { listOf(alpha, bravo, charlie) }
-        runnable.captured.run()
 
         assertEquals(10.0, alphaTarget.captured.x)
         assertEquals(0.0, alphaTarget.captured.z)

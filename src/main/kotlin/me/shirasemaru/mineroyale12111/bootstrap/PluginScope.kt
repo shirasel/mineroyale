@@ -57,12 +57,12 @@ class PluginScope private constructor(
             val countdownService = CountdownService(plugin)
             val matchFlowService = MatchFlowService()
             val victoryService = VictoryService(plugin, messageService)
-            val compassTrackingService = CompassTrackingService(plugin, configManager)
             val endCrystalService = EndCrystalService(plugin, configManager, messageService)
             val deathMarkerService = DeathMarkerService(plugin)
             val matchScopeFactory = MatchScopeFactory()
             val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
             val coroutineScope = CoroutineScope(SupervisorJob() + BukkitDispatcher(plugin))
+            val compassTrackingService = CompassTrackingService(plugin, configManager, coroutineScope)
             val borderManager = BorderManager(
                 plugin = plugin,
                 configManager = configManager,

@@ -1,16 +1,22 @@
 package me.shirasemaru.mineroyale12111.service.tracking
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import me.shirasemaru.mineroyale12111.config.ConfigManager
+import me.shirasemaru.mineroyale12111.coroutines.waitTicks
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
 
 class CompassTrackingService(
     private val plugin: JavaPlugin,
-    private val configManager: ConfigManager
+    private val configManager: ConfigManager,
+    private val coroutineScope: CoroutineScope
 ) {
 
-    private var task: BukkitTask? = null
+    private var trackingJob: Job? = null
 
     fun start(aliveProvider: () -> List<Player>) {
         stop()
@@ -19,28 +25,36 @@ class CompassTrackingService(
             return
         }
 
-        task = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            val alivePlayers = aliveProvider()
-            val maxAlivePlayers = configManager.gameSettings.playerLocatorMaxAlivePlayers
-
-            if (alivePlayers.size > maxAlivePlayers) return@Runnable
-            if (alivePlayers.size <= 1) return@Runnable
-
-            alivePlayers.forEach { player ->
-                val nearest = alivePlayers
-                    .asSequence()
-                    .filter { it.uniqueId != player.uniqueId }
-                    .minByOrNull { it.location.distanceSquared(player.location) }
-
-                if (nearest != null) {
-                    player.compassTarget = nearest.location
-                }
+        trackingJob = coroutineScope.launch {
+            while (currentCoroutineContext().isActive) {
+                updateCompassTargets(aliveProvider)
+                plugin.waitTicks(40L)
             }
-        }, 0L, 40L)
+        }
     }
 
     fun stop() {
-        task?.cancel()
-        task = null
+        trackingJob?.cancel()
+        trackingJob = null
+    }
+
+    private fun updateCompassTargets(aliveProvider: () -> List<Player>) {
+        val alivePlayers = aliveProvider()
+        val maxAlivePlayers = configManager.gameSettings.playerLocatorMaxAlivePlayers
+
+        if (alivePlayers.size > maxAlivePlayers) return
+        if (alivePlayers.size <= 1) return
+
+        alivePlayers.forEach { player ->
+            val playerLocation = player.location
+            val nearest = alivePlayers
+                .asSequence()
+                .filter { it.uniqueId != player.uniqueId }
+                .minByOrNull { other -> other.location.distanceSquared(playerLocation) }
+
+            if (nearest != null) {
+                player.compassTarget = nearest.location
+            }
+        }
     }
 }

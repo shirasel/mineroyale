@@ -21,7 +21,7 @@ class BorderManager(
 
     private val borderService = BorderService(plugin, configManager, messageService, onPvpStateChanged, coroutineScope)
     private val spawnPointService = SpawnPointService(configManager, worldProvider)
-    private val borderDamageService = BorderDamageService(plugin, configManager)
+    private val borderDamageService = BorderDamageService(plugin, configManager, coroutineScope)
 
     private val world get() = worldProvider.require()
     private val border get() = world.worldBorder

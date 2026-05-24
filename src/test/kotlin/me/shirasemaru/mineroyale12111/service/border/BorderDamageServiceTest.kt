@@ -2,6 +2,8 @@ package me.shirasemaru.mineroyale12111.service.border
 
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale12111.config.BorderSettings
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.config.EnhancedDamageSettings
@@ -33,7 +35,7 @@ class BorderDamageServiceTest {
                 maxDamage = 10.0
             )
         )
-        val service = BorderDamageService(plugin, configManager)
+        val service = BorderDamageService(plugin, configManager, CoroutineScope(Dispatchers.Unconfined))
         val insideDamage = mutableListOf<Double>()
         val outsideDamage = mutableListOf<Double>()
         val insidePlayer = mockPlayer(
@@ -73,7 +75,7 @@ class BorderDamageServiceTest {
                 maxDamage = 10.0
             )
         )
-        val service = BorderDamageService(plugin, configManager)
+        val service = BorderDamageService(plugin, configManager, CoroutineScope(Dispatchers.Unconfined))
         val damageLog = mutableListOf<Double>()
         var location = Location(null, 20.0, 64.0, 0.0)
         val player = mockPlayer(
@@ -113,7 +115,7 @@ class BorderDamageServiceTest {
                 maxDamage = 10.0
             )
         )
-        val service = BorderDamageService(plugin, configManager)
+        val service = BorderDamageService(plugin, configManager, CoroutineScope(Dispatchers.Unconfined))
         val damageLog = mutableListOf<Double>()
         val player = mockPlayer(
             uuid = UUID.nameUUIDFromBytes("spectator".toByteArray()),
@@ -189,11 +191,11 @@ class BorderDamageServiceTest {
         private val tasks = mutableListOf<TaskEntry>()
 
         val scheduler: BukkitScheduler = mockk {
-            every { runTaskTimer(any<JavaPlugin>(), any<Runnable>(), any<Long>(), any<Long>()) } answers {
+            every { runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } answers {
                 schedule(
                     runnable = secondArg(),
                     delay = thirdArg(),
-                    period = arg(3)
+                    period = null
                 )
             }
         }
