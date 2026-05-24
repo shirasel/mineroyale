@@ -14,6 +14,7 @@ class MatchScope(
     var preparedBorderPlan: MatchBorderPlan? = null
     var victoryRespawnLocation: Location? = null
     var scoreboardTask: BukkitTask? = null
+    var ruleSnapshot: MatchRuleSnapshot? = null
 
     fun clearPreparedSpawns() {
         preparedSpawnLocations = null
@@ -24,6 +25,7 @@ class MatchScope(
     fun resetRuntime() {
         clearPreparedSpawns()
         victoryRespawnLocation = null
+        ruleSnapshot = null
         scoreboardTask?.cancel()
         scoreboardTask = null
         session.resetToWaiting()

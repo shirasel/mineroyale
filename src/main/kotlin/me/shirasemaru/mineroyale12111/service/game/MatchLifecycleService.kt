@@ -8,6 +8,7 @@ import me.shirasemaru.mineroyale12111.game.MatchScope
 import me.shirasemaru.mineroyale12111.game.MatchScopeFactory
 import me.shirasemaru.mineroyale12111.game.MatchScopeHolder
 import me.shirasemaru.mineroyale12111.game.GameSession
+import me.shirasemaru.mineroyale12111.game.MatchRuleSnapshot
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
 import me.shirasemaru.mineroyale12111.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale12111.service.player.PlayerRegistry
@@ -41,8 +42,6 @@ class MatchLifecycleService(
         const val MATCH_START_PLAYER_BATCH_SIZE = 4
     }
 
-    private var originalAnnounceAdvancements: Boolean? = null
-    private var originalLocatorBar: Boolean? = null
     private val matchScope: MatchScope
         get() = matchScopeHolder.current
 
@@ -190,37 +189,44 @@ class MatchLifecycleService(
     private fun applyMatchRules() {
         scoreboardManager.setNameTagsHidden(configManager.gameSettings.hideNameTags)
         val world = worldProvider.require()
-        locatorBarRule()?.let { locatorBarRule ->
-            originalLocatorBar = world.getGameRuleValue(locatorBarRule)
-            world.setGameRule(locatorBarRule, configManager.gameSettings.showPlayerLocatorBar)
+        val originalLocatorBar = locatorBarRule()?.let { locatorBarRule ->
+            world.getGameRuleValue(locatorBarRule).also {
+                world.setGameRule(locatorBarRule, configManager.gameSettings.showPlayerLocatorBar)
+            }
         }
 
-        if (!configManager.gameSettings.disableAdvancementAnnouncements) {
-            originalAnnounceAdvancements = null
-            return
-        }
+        val originalAdvancementAnnouncements =
+            if (!configManager.gameSettings.disableAdvancementAnnouncements) {
+                null
+            } else {
+                showAdvancementMessagesRule()?.let { rule ->
+                    world.getGameRuleValue(rule).also {
+                        world.setGameRule(rule, false)
+                    }
+                }
+            }
 
-        showAdvancementMessagesRule()?.let { rule ->
-            originalAnnounceAdvancements = world.getGameRuleValue(rule)
-            world.setGameRule(rule, false)
-        }
+        matchScope.ruleSnapshot = MatchRuleSnapshot(
+            locatorBar = originalLocatorBar,
+            advancementAnnouncements = originalAdvancementAnnouncements
+        )
     }
 
     private fun restoreMatchRules() {
         scoreboardManager.setNameTagsHidden(false)
-        originalLocatorBar?.let {
+        val snapshot = matchScope.ruleSnapshot
+        snapshot?.locatorBar?.let {
             locatorBarRule()?.let { locatorBarRule ->
                 worldProvider.require().setGameRule(locatorBarRule, it)
             }
-            originalLocatorBar = null
         }
 
-        originalAnnounceAdvancements?.let {
+        snapshot?.advancementAnnouncements?.let {
             showAdvancementMessagesRule()?.let { rule ->
                 worldProvider.require().setGameRule(rule, it)
             }
-            originalAnnounceAdvancements = null
         }
+        matchScope.ruleSnapshot = null
     }
 
     private fun startScoreboardTask(session: GameSession) {
