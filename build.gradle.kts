@@ -9,6 +9,7 @@ version = "1.0"
 
 val paperApiVersion = "26.1.2.build.69-stable"
 val testPaperApiVersion = "1.21.11-R0.1-SNAPSHOT"
+val byteBuddyVersion = "1.18.10"
 
 repositories {
     mavenCentral()
@@ -24,6 +25,8 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("net.bytebuddy:byte-buddy:$byteBuddyVersion")
+    testImplementation("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
     testImplementation("io.papermc.paper:paper-api:$testPaperApiVersion")
 }
 
