@@ -59,6 +59,10 @@ tasks.assemble {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs(
+        "-Xshare:off",
+        "-XX:+EnableDynamicAgentLoading"
+    )
     val testRunId = providers.gradleProperty("testRunId").orNull ?: "default"
     binaryResultsDirectory.set(layout.buildDirectory.dir("test-results-jvm/$testRunId/binary"))
 }

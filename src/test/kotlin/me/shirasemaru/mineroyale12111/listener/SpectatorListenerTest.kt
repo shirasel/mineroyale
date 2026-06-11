@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package me.shirasemaru.mineroyale12111.listener
 
 import io.mockk.every
@@ -49,7 +47,7 @@ class SpectatorListenerTest {
 
         listener.onRightClick(event)
 
-        assertTrue(event.isCancelled())
+        verify(exactly = 1) { event.setCancelled(true) }
         verify(exactly = 1) { gameManager.openSpectatorMenu(spectator) }
     }
 
@@ -70,7 +68,7 @@ class SpectatorListenerTest {
 
         listener.onRightClick(event)
 
-        assertFalse(event.isCancelled())
+        verify(exactly = 0) { event.setCancelled(any()) }
         verify(exactly = 0) { gameManager.openSpectatorMenu(any()) }
     }
 
@@ -101,7 +99,7 @@ class SpectatorListenerTest {
 
         listener.onInventoryClick(event)
 
-        assertTrue(event.isCancelled())
+        assertTrue(event.isCancelled)
         verify(exactly = 1) { gameManager.teleportSpectator(spectator, target) }
     }
 
@@ -124,7 +122,7 @@ class SpectatorListenerTest {
 
         listener.onInventoryClick(event)
 
-        assertFalse(event.isCancelled())
+        assertFalse(event.isCancelled)
         verify(exactly = 0) { gameManager.teleportSpectator(any(), any()) }
     }
 
@@ -133,13 +131,11 @@ class SpectatorListenerTest {
         action: Action,
         item: ItemStack?
     ): PlayerInteractEvent {
-        var cancelled = false
         val event = mockk<PlayerInteractEvent>()
         every { event.player } returns player
         every { event.action } returns action
         every { event.item } returns item
-        every { event.isCancelled() } answers { cancelled }
-        every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        every { event.setCancelled(any()) } returns Unit
         return event
     }
 
@@ -156,7 +152,6 @@ class SpectatorListenerTest {
         every { event.click } returns click
         every { event.currentItem } returns item
         every { event.view } returns view
-        every { view.title } returns title
         every { view.title() } returns Component.text(title)
         every { event.isCancelled } answers { cancelled }
         every { event.isCancelled = any() } answers { cancelled = firstArg() }
