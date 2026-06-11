@@ -8,6 +8,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import me.shirasemaru.mineroyale12111.game.GameManager
+import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -91,7 +92,7 @@ class SpectatorListenerTest {
 
         every { gameManager.isRunning() } returns true
         every { gameManager.isSpectator(spectator) } returns true
-        every { gameManager.isSpectatorMenu("観戦先選択") } returns true
+        every { gameManager.isSpectatorMenu(Component.text("観戦先選択")) } returns true
         every { gameManager.extractSpectatorTargetName(item) } returns "target"
         every { Bukkit.getPlayerExact("target") } returns target
         every { target.isOnline } returns true
@@ -119,7 +120,7 @@ class SpectatorListenerTest {
 
         every { gameManager.isRunning() } returns true
         every { gameManager.isSpectator(spectator) } returns true
-        every { gameManager.isSpectatorMenu("他の画面") } returns false
+        every { gameManager.isSpectatorMenu(Component.text("他の画面")) } returns false
 
         listener.onInventoryClick(event)
 
@@ -156,6 +157,7 @@ class SpectatorListenerTest {
         every { event.currentItem } returns item
         every { event.view } returns view
         every { view.title } returns title
+        every { view.title() } returns Component.text(title)
         every { event.isCancelled } answers { cancelled }
         every { event.isCancelled = any() } answers { cancelled = firstArg() }
         return event

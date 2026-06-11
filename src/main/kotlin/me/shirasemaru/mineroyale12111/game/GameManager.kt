@@ -3,6 +3,7 @@ package me.shirasemaru.mineroyale12111.game
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import net.kyori.adventure.text.Component
 import org.bukkit.plugin.java.JavaPlugin
 import me.shirasemaru.mineroyale12111.config.ConfigManager
 import me.shirasemaru.mineroyale12111.service.border.BorderManager
@@ -230,7 +231,7 @@ class GameManager(
     fun isSpectatorNavigator(item: ItemStack): Boolean =
         spectatorService.isNavigatorRod(item)
 
-    fun isSpectatorMenu(title: String): Boolean =
+    fun isSpectatorMenu(title: Component): Boolean =
         spectatorService.isSpectatorMenu(title)
 
     fun isEndCrystal(item: ItemStack): Boolean =

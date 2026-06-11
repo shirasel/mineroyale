@@ -36,7 +36,7 @@ class SpectatorListener(
 
         if (!gameManager.isRunning()) return
         if (!gameManager.isSpectator(player)) return
-        if (!gameManager.isSpectatorMenu(event.view.title)) return
+        if (!gameManager.isSpectatorMenu(event.view.title())) return
 
         event.isCancelled = true
 

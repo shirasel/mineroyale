@@ -13,7 +13,7 @@ import org.bukkit.inventory.meta.SkullMeta
 
 class SpectatorService {
 
-    private val navigatorTitle = "観戦先選択"
+    private val navigatorTitle = Component.text("観戦先選択")
 
     fun applySpectatorMode(player: Player) {
         player.gameMode = GameMode.SPECTATOR
@@ -29,7 +29,7 @@ class SpectatorService {
         spectators.forEach { spectator ->
             spectator.inventory.setItem(0, createNavigatorRod())
 
-            if (isSpectatorMenu(spectator.openInventory.title)) {
+            if (isSpectatorMenu(spectator.openInventory.title())) {
                 openTeleportMenu(spectator, alivePlayers, displayNameProvider)
             }
         }
@@ -65,7 +65,7 @@ class SpectatorService {
     fun isNavigatorRod(item: ItemStack?): Boolean =
         item != null && item.type == Material.BLAZE_ROD
 
-    fun isSpectatorMenu(title: String): Boolean = title == navigatorTitle
+    fun isSpectatorMenu(title: Component): Boolean = title == navigatorTitle
 
     private fun createNavigatorRod(): ItemStack {
         val item = ItemStack(Material.BLAZE_ROD)

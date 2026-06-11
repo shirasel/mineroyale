@@ -7,6 +7,9 @@ plugins {
 group = "me.shirasemaru"
 version = "1.0"
 
+val paperApiVersion = "26.1.2.build.69-stable"
+val testPaperApiVersion = "1.21.11-R0.1-SNAPSHOT"
+
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") {
@@ -15,13 +18,13 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("io.mockk:mockk:1.13.10")
-    testImplementation("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("io.papermc.paper:paper-api:$testPaperApiVersion")
 }
 
 tasks {
@@ -41,7 +44,7 @@ tasks {
     }
 }
 
-val targetJavaVersion = 21
+val targetJavaVersion = 25
 kotlin {
     jvmToolchain(targetJavaVersion)
 }
