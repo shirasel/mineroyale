@@ -7,6 +7,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.coroutines.waitTicks
+import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.entity.Player
@@ -91,7 +92,7 @@ class BorderDamageService(
         }
     }
 
-    private fun isOutsideBorder(location: org.bukkit.Location, border: WorldBorder): Boolean {
+    private fun isOutsideBorder(location: Location, border: WorldBorder): Boolean {
         val center = border.center
         val radius = border.size / 2
         val damageRadius = radius + 1

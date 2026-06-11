@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package me.shirasemaru.mineroyale.listener
 
 import io.mockk.every
@@ -14,6 +12,7 @@ import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.World
+import org.bukkit.block.Block
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
@@ -31,11 +30,10 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.projectiles.ProjectileSource
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
+import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class GameListenerTest {
 
@@ -62,7 +60,7 @@ class GameListenerTest {
         every { Bukkit.getScheduler() } returns scheduler
         every { gameManager.isRunning() } returns true
         every { event.entity } returns player
-        every { player.uniqueId } returns java.util.UUID.randomUUID()
+        every { player.uniqueId } returns UUID.randomUUID()
         every { player.location } returns deathLocation
         every { scheduler.runTaskLater(plugin, any<Runnable>(), 1L) } answers {
             scheduled = secondArg()
@@ -123,7 +121,7 @@ class GameListenerTest {
 
         listener.onDamage(event)
 
-        assertTrue(event.isCancelled())
+        verify(exactly = 1) { event.setCancelled(true) }
     }
 
     @Test
@@ -140,7 +138,7 @@ class GameListenerTest {
 
         listener.onDamage(event)
 
-        assertTrue(event.isCancelled())
+        verify(exactly = 1) { event.setCancelled(true) }
         verify(exactly = 0) { gameManager.isRunning() }
     }
 
@@ -161,7 +159,7 @@ class GameListenerTest {
 
         listener.onDamage(event)
 
-        assertFalse(event.isCancelled())
+        verify(exactly = 0) { event.setCancelled(any()) }
         verify(exactly = 0) { gameManager.isPvpEnabled() }
     }
 
@@ -182,7 +180,7 @@ class GameListenerTest {
 
         listener.onDamage(event)
 
-        assertTrue(event.isCancelled())
+        verify(exactly = 1) { event.setCancelled(true) }
         verify(exactly = 0) { gameManager.isPvpEnabled() }
     }
 
@@ -202,8 +200,8 @@ class GameListenerTest {
         listener.onBlockPlace(placeEvent)
         listener.onBlockBreak(breakEvent)
 
-        assertTrue(placeEvent.isCancelled())
-        assertTrue(breakEvent.isCancelled())
+        verify(exactly = 1) { placeEvent.setCancelled(true) }
+        verify(exactly = 1) { breakEvent.setCancelled(true) }
     }
 
     @Test
@@ -219,7 +217,7 @@ class GameListenerTest {
 
         listener.onBlockPlace(placeEvent)
 
-        assertFalse(placeEvent.isCancelled())
+        verify(exactly = 0) { placeEvent.setCancelled(any()) }
         verify(exactly = 0) { gameManager.isOutsideCurrentBorder(any()) }
     }
 
@@ -236,7 +234,7 @@ class GameListenerTest {
 
         every { gameManager.isRunning() } returns true
         every { deathEvent.entity } returns player
-        every { player.uniqueId } returns java.util.UUID.randomUUID()
+        every { player.uniqueId } returns UUID.randomUUID()
         every { player.location } returns deathLocation
         every { gameManager.respawnOverrideLocation() } returns null
         every { gameManager.isSpectator(player) } returns true
@@ -313,25 +311,23 @@ class GameListenerTest {
 
         listener.onArmorStandManipulate(event)
 
-        assertTrue(event.isCancelled())
+        verify(exactly = 1) { event.isCancelled = true }
     }
 
     private fun mockPlayer(): Player {
         var gameMode = GameMode.SURVIVAL
         val player = mockk<Player>()
-        every { player.uniqueId } returns java.util.UUID.randomUUID()
+        every { player.uniqueId } returns UUID.randomUUID()
         every { player.gameMode } answers { gameMode }
         every { player.gameMode = any() } answers { gameMode = firstArg() }
         return player
     }
 
     private fun mockDamageEvent(damager: Any, victim: Entity): EntityDamageByEntityEvent {
-        var cancelled = false
         val event = mockk<EntityDamageByEntityEvent>()
         every { event.entity } returns victim
         every { event.damager } returns damager as Entity
-        every { event.isCancelled() } answers { cancelled }
-        every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        every { event.setCancelled(any()) } returns Unit
         return event
     }
 
@@ -345,24 +341,20 @@ class GameListenerTest {
     }
 
     private fun mockBlockPlaceEvent(location: Location): BlockPlaceEvent {
-        var cancelled = false
-        val block = mockk<org.bukkit.block.Block>()
+        val block = mockk<Block>()
         val event = mockk<BlockPlaceEvent>()
         every { block.location } returns location
         every { event.block } returns block
-        every { event.isCancelled() } answers { cancelled }
-        every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        every { event.setCancelled(any()) } returns Unit
         return event
     }
 
     private fun mockBlockBreakEvent(location: Location): BlockBreakEvent {
-        var cancelled = false
-        val block = mockk<org.bukkit.block.Block>()
+        val block = mockk<Block>()
         val event = mockk<BlockBreakEvent>()
         every { block.location } returns location
         every { event.block } returns block
-        every { event.isCancelled() } answers { cancelled }
-        every { event.setCancelled(any()) } answers { cancelled = firstArg() }
+        every { event.setCancelled(any()) } returns Unit
         return event
     }
 
@@ -377,11 +369,9 @@ class GameListenerTest {
     private fun mockArmorStandManipulateEvent(
         armorStand: ArmorStand
     ): PlayerArmorStandManipulateEvent {
-        var cancelled = false
         val event = mockk<PlayerArmorStandManipulateEvent>()
         every { event.rightClicked } returns armorStand
-        every { event.isCancelled } answers { cancelled }
-        every { event.isCancelled = any() } answers { cancelled = firstArg() }
+        every { event.isCancelled = any() } returns Unit
         return event
     }
 

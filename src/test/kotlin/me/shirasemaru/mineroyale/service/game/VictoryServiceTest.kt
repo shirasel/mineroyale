@@ -18,6 +18,7 @@ import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.entity.Firework
 import org.bukkit.entity.Player
+import org.bukkit.inventory.meta.FireworkMeta
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
@@ -114,7 +115,7 @@ class VictoryServiceTest {
 
     private fun mockFirework(): Firework {
         val firework = mockk<Firework>()
-        val meta = mockk<org.bukkit.inventory.meta.FireworkMeta>()
+        val meta = mockk<FireworkMeta>()
         every { firework.fireworkMeta } returns meta
         every { firework.fireworkMeta = any() } just runs
         every { meta.addEffect(any()) } just runs

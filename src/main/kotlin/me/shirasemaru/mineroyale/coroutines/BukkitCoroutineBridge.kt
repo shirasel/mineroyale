@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Location
 import org.bukkit.plugin.java.JavaPlugin
+import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 
@@ -40,6 +41,6 @@ suspend fun JavaPlugin.awaitChunkPreload(locations: Collection<Location>) =
             return@suspendCancellableCoroutine
         }
 
-        java.util.concurrent.CompletableFuture.allOf(*futures.toTypedArray())
+        CompletableFuture.allOf(*futures.toTypedArray())
             .thenRun { continuation.resume(Unit) }
     }

@@ -33,6 +33,8 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -183,7 +185,7 @@ class MatchLifecycleServiceTest {
         every { deathMarkerService.clearMarkers() } just runs
         every { messageService.logMatchStarted(any()) } just runs
         every { scoreboardManager.setNameTagsHidden(any()) } just runs
-        every { spawnWorld.getChunkAtAsync(spawn, true) } returns java.util.concurrent.CompletableFuture.completedFuture(chunk)
+        every { spawnWorld.getChunkAtAsync(spawn, true) } returns CompletableFuture.completedFuture(chunk)
 
         val service = MatchLifecycleService(
             plugin = plugin,
@@ -392,7 +394,7 @@ class MatchLifecycleServiceTest {
     private fun mockPlayer(name: String, gameMode: GameMode = GameMode.SURVIVAL): Player {
         val player = mockk<Player>()
         every { player.name } returns name
-        every { player.uniqueId } returns java.util.UUID.nameUUIDFromBytes(name.toByteArray())
+        every { player.uniqueId } returns UUID.nameUUIDFromBytes(name.toByteArray())
         every { player.gameMode } returns gameMode
         every { player.isOnline } returns true
         return player

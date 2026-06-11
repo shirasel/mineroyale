@@ -75,7 +75,7 @@ class PlayerRegistryTest {
     private fun mockPlayer(name: String, online: Boolean = true): Player {
         val player = mockk<Player>()
         every { player.name } returns name
-        every { player.uniqueId } returns java.util.UUID.nameUUIDFromBytes(name.toByteArray())
+        every { player.uniqueId } returns UUID.nameUUIDFromBytes(name.toByteArray())
         every { player.isOnline } returns online
         return player
     }

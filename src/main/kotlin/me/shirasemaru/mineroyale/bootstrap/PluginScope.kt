@@ -20,28 +20,11 @@ import me.shirasemaru.mineroyale.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale.service.player.SpectatorService
 import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
-import me.shirasemaru.mineroyale.ui.ScoreboardManager
 
 class PluginScope private constructor(
     val configManager: ConfigManager,
     val messageService: MessageService,
-    val worldProvider: GameWorldProvider,
-    val scoreboardFactory: ScoreboardFactory,
-    val scoreboardManager: ScoreboardManager,
-    val playerRegistry: PlayerRegistry,
-    val playerSetupService: PlayerSetupService,
-    val spectatorService: SpectatorService,
-    val countdownService: CountdownService,
-    val matchFlowService: MatchFlowService,
-    val victoryService: VictoryService,
-    val compassTrackingService: CompassTrackingService,
-    val endCrystalService: EndCrystalService,
-    val deathMarkerService: DeathMarkerService,
-    val borderManager: BorderManager,
-    val matchScopeFactory: MatchScopeFactory,
-    val matchScopeHolder: MatchScopeHolder,
     val coroutineScope: CoroutineScope,
-    val matchLifecycleService: MatchLifecycleService,
     val gameManager: GameManager
 ) {
 
@@ -50,8 +33,7 @@ class PluginScope private constructor(
             val configManager = ConfigManager(plugin).apply { load() }
             val messageService = MessageService()
             val worldProvider = BukkitGameWorldProvider(configManager)
-            val scoreboardFactory = BukkitScoreboardFactory()
-            val scoreboardManager = scoreboardFactory.create()
+            val scoreboardManager = BukkitScoreboardFactory().create()
             val playerRegistry = PlayerRegistry()
             val playerSetupService = PlayerSetupService(configManager)
             val spectatorService = SpectatorService()
@@ -109,23 +91,7 @@ class PluginScope private constructor(
             return PluginScope(
                 configManager = configManager,
                 messageService = messageService,
-                worldProvider = worldProvider,
-                scoreboardFactory = scoreboardFactory,
-                scoreboardManager = scoreboardManager,
-                playerRegistry = playerRegistry,
-                playerSetupService = playerSetupService,
-                spectatorService = spectatorService,
-                countdownService = countdownService,
-                matchFlowService = matchFlowService,
-                victoryService = victoryService,
-                compassTrackingService = compassTrackingService,
-                endCrystalService = endCrystalService,
-                deathMarkerService = deathMarkerService,
-                borderManager = borderManager,
-                matchScopeFactory = matchScopeFactory,
-                matchScopeHolder = matchScopeHolder,
                 coroutineScope = coroutineScope,
-                matchLifecycleService = matchLifecycleService,
                 gameManager = gameManager
             )
         }

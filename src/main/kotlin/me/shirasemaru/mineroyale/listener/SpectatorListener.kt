@@ -8,6 +8,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.entity.Player
 
 class SpectatorListener(
     private val gameManager: GameManager
@@ -32,7 +33,7 @@ class SpectatorListener(
 
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
-        val player = event.whoClicked as? org.bukkit.entity.Player ?: return
+        val player = event.whoClicked as? Player ?: return
 
         if (!gameManager.isRunning()) return
         if (!gameManager.isSpectator(player)) return

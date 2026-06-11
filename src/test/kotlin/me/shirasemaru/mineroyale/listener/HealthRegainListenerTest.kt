@@ -2,14 +2,13 @@ package me.shirasemaru.mineroyale.listener
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import me.shirasemaru.mineroyale.game.GameManager
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityRegainHealthEvent
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class HealthRegainListenerTest {
 
@@ -31,11 +30,11 @@ class HealthRegainListenerTest {
         now += 4_100L
         listener.onHealthRegain(thirdEvent)
 
-        assertFalse(firstEvent.isCancelled())
+        verify(exactly = 0) { firstEvent.isCancelled = any() }
         assertEquals(0.5, firstEvent.amount, 0.001)
-        assertTrue(secondEvent.isCancelled())
+        verify(exactly = 1) { secondEvent.isCancelled = true }
         assertEquals(6.0, secondEvent.amount, 0.001)
-        assertFalse(thirdEvent.isCancelled())
+        verify(exactly = 0) { thirdEvent.isCancelled = any() }
         assertEquals(0.5, thirdEvent.amount, 0.001)
     }
 
@@ -50,7 +49,7 @@ class HealthRegainListenerTest {
 
         listener.onHealthRegain(event)
 
-        assertFalse(event.isCancelled())
+        verify(exactly = 0) { event.isCancelled = any() }
         assertEquals(4.0, event.amount, 0.001)
         assertEquals(20, player.foodLevel)
         assertEquals(20f, player.saturation)
@@ -73,13 +72,11 @@ class HealthRegainListenerTest {
         reason: EntityRegainHealthEvent.RegainReason,
         initialAmount: Double
     ): EntityRegainHealthEvent {
-        var cancelled = false
         var amount = initialAmount
         val event = mockk<EntityRegainHealthEvent>()
         every { event.entity } returns player
         every { event.regainReason } returns reason
-        every { event.isCancelled } answers { cancelled }
-        every { event.isCancelled = any() } answers { cancelled = firstArg() }
+        every { event.isCancelled = any() } returns Unit
         every { event.amount } answers { amount }
         every { event.amount = any() } answers { amount = firstArg() }
         return event

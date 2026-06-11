@@ -8,6 +8,7 @@ import me.shirasemaru.mineroyale.service.game.MessageService
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
+import kotlin.math.abs
 
 class BorderManager(
     plugin: JavaPlugin,
@@ -63,8 +64,8 @@ class BorderManager(
 
         val center = border.center
         val radius = border.size / 2
-        val dx = kotlin.math.abs(location.x - center.x)
-        val dz = kotlin.math.abs(location.z - center.z)
+        val dx = abs(location.x - center.x)
+        val dz = abs(location.z - center.z)
         return dx > radius || dz > radius
     }
 
