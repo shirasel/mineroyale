@@ -3,6 +3,7 @@ package me.shirasemaru.mineroyale.bootstrap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import me.shirasemaru.mineroyale.Mineroyale
+import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.coroutines.BukkitDispatcher
 import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.game.MatchScopeFactory
@@ -22,7 +23,7 @@ import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale.ui.ScoreboardManager
 
 class PluginScope private constructor(
-    val configManager: me.shirasemaru.mineroyale.config.ConfigManager,
+    val configManager: ConfigManager,
     val messageService: MessageService,
     val worldProvider: GameWorldProvider,
     val scoreboardFactory: ScoreboardFactory,
@@ -46,7 +47,7 @@ class PluginScope private constructor(
 
     companion object {
         fun create(plugin: Mineroyale): PluginScope {
-            val configManager = me.shirasemaru.mineroyale.config.ConfigManager(plugin).apply { load() }
+            val configManager = ConfigManager(plugin).apply { load() }
             val messageService = MessageService()
             val worldProvider = BukkitGameWorldProvider(configManager)
             val scoreboardFactory = BukkitScoreboardFactory()

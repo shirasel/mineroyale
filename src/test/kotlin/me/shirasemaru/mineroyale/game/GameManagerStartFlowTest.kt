@@ -22,8 +22,6 @@ import me.shirasemaru.mineroyale.config.GameSettings
 import me.shirasemaru.mineroyale.config.PhaseSettings
 import me.shirasemaru.mineroyale.config.SpawnSettings
 import me.shirasemaru.mineroyale.config.WorldSettings
-import me.shirasemaru.mineroyale.game.MatchScopeFactory
-import me.shirasemaru.mineroyale.game.MatchScopeHolder
 import me.shirasemaru.mineroyale.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale.service.border.BorderManager
 import me.shirasemaru.mineroyale.service.game.CountdownService

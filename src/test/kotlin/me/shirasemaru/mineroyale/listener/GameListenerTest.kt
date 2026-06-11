@@ -9,10 +9,13 @@ import io.mockk.unmockkStatic
 import io.mockk.verify
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.config.GameSettings
+import me.shirasemaru.mineroyale.game.GameManager
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.World
+import org.bukkit.entity.ArmorStand
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
 import org.bukkit.event.block.BlockBreakEvent
@@ -47,7 +50,7 @@ class GameListenerTest {
 
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val scheduler = mockk<BukkitScheduler>()
         val task = mockk<BukkitTask>(relaxed = true)
         val listener = GameListener(plugin, configManager, gameManager)
@@ -81,7 +84,7 @@ class GameListenerTest {
     fun `onQuit and onKick delegate to handlePlayerDeath only while running`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val quitEvent = mockk<PlayerQuitEvent>()
@@ -106,7 +109,7 @@ class GameListenerTest {
     fun `onDamage cancels pvp damage when game is running and pvp is disabled`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val attacker = mockPlayer()
         val victim = mockPlayer()
@@ -127,10 +130,10 @@ class GameListenerTest {
     fun `onDamage cancels attacks against protected death markers even outside match flow`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val attacker = mockPlayer()
-        val marker = mockk<org.bukkit.entity.Entity>()
+        val marker = mockk<Entity>()
         val event = mockDamageEvent(attacker, marker)
 
         every { gameManager.isProtectedDeathMarker(marker) } returns true
@@ -145,7 +148,7 @@ class GameListenerTest {
     fun `onDamage does not cancel when attacker is not a player source`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val nonPlayerProjectile = mockk<Projectile>()
         val nonPlayerSource = mockk<ProjectileSource>()
@@ -166,7 +169,7 @@ class GameListenerTest {
     fun `onDamage cancels when attacker or victim is spectator`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val attacker = mockPlayer()
         val victim = mockPlayer()
@@ -187,7 +190,7 @@ class GameListenerTest {
     fun `onBlockPlace and onBlockBreak cancel modifications outside border when enabled`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager(restrictBlockModificationOutsideBorder = true)
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val outsideLocation = Location(mockk<World>(), 200.0, 64.0, 200.0)
         val placeEvent = mockBlockPlaceEvent(outsideLocation)
@@ -207,7 +210,7 @@ class GameListenerTest {
     fun `onBlockPlace ignores border check when restriction is disabled`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager(restrictBlockModificationOutsideBorder = false)
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val outsideLocation = Location(mockk<World>(), 200.0, 64.0, 200.0)
         val placeEvent = mockBlockPlaceEvent(outsideLocation)
@@ -224,7 +227,7 @@ class GameListenerTest {
     fun `onRespawn restores death location and spectator mode for spectators`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val deathEvent = mockk<PlayerDeathEvent>()
@@ -259,7 +262,7 @@ class GameListenerTest {
     fun `onRespawn uses victory location while ending`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val respawnEvent = mockRespawnEvent(player)
@@ -278,7 +281,7 @@ class GameListenerTest {
     fun `onMove observes border damage targets only while running and changing block`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
         val player = mockPlayer()
         val event = mockMoveEvent(
@@ -301,9 +304,9 @@ class GameListenerTest {
     fun `onArmorStandManipulate cancels interaction with protected death markers`() {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
-        val gameManager = mockk<me.shirasemaru.mineroyale.game.GameManager>()
+        val gameManager = mockk<GameManager>()
         val listener = GameListener(plugin, configManager, gameManager)
-        val armorStand = mockk<org.bukkit.entity.ArmorStand>()
+        val armorStand = mockk<ArmorStand>()
         val event = mockArmorStandManipulateEvent(armorStand)
 
         every { gameManager.isProtectedDeathMarker(armorStand) } returns true
@@ -322,11 +325,11 @@ class GameListenerTest {
         return player
     }
 
-    private fun mockDamageEvent(damager: Any, victim: org.bukkit.entity.Entity): EntityDamageByEntityEvent {
+    private fun mockDamageEvent(damager: Any, victim: Entity): EntityDamageByEntityEvent {
         var cancelled = false
         val event = mockk<EntityDamageByEntityEvent>()
         every { event.entity } returns victim
-        every { event.damager } returns damager as org.bukkit.entity.Entity
+        every { event.damager } returns damager as Entity
         every { event.isCancelled() } answers { cancelled }
         every { event.setCancelled(any()) } answers { cancelled = firstArg() }
         return event
@@ -372,7 +375,7 @@ class GameListenerTest {
     }
 
     private fun mockArmorStandManipulateEvent(
-        armorStand: org.bukkit.entity.ArmorStand
+        armorStand: ArmorStand
     ): PlayerArmorStandManipulateEvent {
         var cancelled = false
         val event = mockk<PlayerArmorStandManipulateEvent>()

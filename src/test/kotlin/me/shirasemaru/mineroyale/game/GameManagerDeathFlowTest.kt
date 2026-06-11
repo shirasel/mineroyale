@@ -14,8 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale.Mineroyale
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale.config.ConfigManager
-import me.shirasemaru.mineroyale.game.MatchScopeFactory
-import me.shirasemaru.mineroyale.game.MatchScopeHolder
 import me.shirasemaru.mineroyale.service.border.BorderManager
 import me.shirasemaru.mineroyale.service.game.CountdownService
 import me.shirasemaru.mineroyale.service.game.DeathMarkerService
