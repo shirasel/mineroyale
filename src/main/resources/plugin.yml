@@ -1,6 +1,6 @@
-name: mineroyale12111
+name: mineroyale
 version: "1.1"
-main: me.shirasemaru.mineroyale12111.Mineroyale12111
+main: me.shirasemaru.mineroyale.Mineroyale
 api-version: "1.21"
 
 commands:

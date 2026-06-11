@@ -4,3 +4,6 @@
 /.kotlin/
 /.idea/modules/
 *.iml
+!/.idea/modules/
+!/.idea/modules/mineroyale.main.iml
+!/.idea/modules/mineroyale.test.iml

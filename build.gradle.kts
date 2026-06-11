@@ -5,11 +5,16 @@ plugins {
 }
 
 group = "me.shirasemaru"
-version = "1.0"
+version = property("pluginVersion").toString()
 
-val paperApiVersion = "26.1.2.build.69-stable"
-val testPaperApiVersion = "1.21.11-R0.1-SNAPSHOT"
-val byteBuddyVersion = "1.18.10"
+val paperApiVersion = property("paperApiVersion").toString()
+val testPaperApiVersion = property("testPaperApiVersion").toString()
+val runMinecraftVersion = property("runMinecraftVersion").toString()
+val targetJavaVersion = property("targetJavaVersion").toString().toInt()
+val junitVersion = property("junitVersion").toString()
+val mockkVersion = property("mockkVersion").toString()
+val byteBuddyVersion = property("byteBuddyVersion").toString()
+val coroutinesVersion = property("coroutinesVersion").toString()
 
 repositories {
     mavenCentral()
@@ -21,10 +26,10 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+    testImplementation("io.mockk:mockk:$mockkVersion")
     testImplementation("net.bytebuddy:byte-buddy:$byteBuddyVersion")
     testImplementation("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
     testImplementation("io.papermc.paper:paper-api:$testPaperApiVersion")
@@ -35,7 +40,7 @@ tasks {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.
         // Your plugin's jar (or shadowJar if present) will be used automatically.
-        minecraftVersion("1.21")
+        minecraftVersion(runMinecraftVersion)
     }
 
     shadowJar {
@@ -47,7 +52,6 @@ tasks {
     }
 }
 
-val targetJavaVersion = 25
 kotlin {
     jvmToolchain(targetJavaVersion)
 }
