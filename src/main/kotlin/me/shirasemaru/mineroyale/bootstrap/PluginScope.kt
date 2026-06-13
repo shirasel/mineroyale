@@ -43,6 +43,7 @@ class PluginScope private constructor(
             val victoryService = VictoryService(plugin, messageService)
             val endCrystalService = EndCrystalService(plugin, configManager, messageService)
             val deathMarkerService = DeathMarkerService(plugin)
+            deathMarkerService.clearMarkers()
             val matchScopeFactory = MatchScopeFactory()
             val matchScopeHolder = MatchScopeHolder(matchScopeFactory.create())
             val coroutineScope = CoroutineScope(SupervisorJob() + BukkitDispatcher(plugin))
