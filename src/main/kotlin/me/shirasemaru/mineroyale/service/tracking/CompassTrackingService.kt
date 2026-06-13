@@ -21,7 +21,7 @@ class CompassTrackingService(
     fun start(aliveProvider: () -> List<Player>) {
         stop()
 
-        if (!configManager.gameSettings.showPlayerLocatorBar) {
+        if (!configManager.gameSettings.enableCompassTracking) {
             return
         }
 

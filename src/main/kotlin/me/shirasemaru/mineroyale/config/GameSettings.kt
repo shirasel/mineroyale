@@ -7,6 +7,7 @@ data class GameSettings(
     val initialPvpGraceSeconds: Int,
     val showPlayerLocatorBar: Boolean,
     val playerLocatorMaxAlivePlayers: Int,
+    val enableCompassTracking: Boolean = true,
     val giveInitialCompass: Boolean,
     val giveEndCrystal: Boolean,
     val endCrystalGlowSeconds: Int,

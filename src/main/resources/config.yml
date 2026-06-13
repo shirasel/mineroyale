@@ -7,8 +7,9 @@ game:
   max-players: 20
   countdown-seconds: 30
   initial-pvp-grace-seconds: 45
-  show-player-locator-bar: true
+  show-player-locator-bar: false
   player-locator-max-alive-players: 4
+  enable-compass-tracking: true
   give-initial-compass: true
   give-end-crystal: true
   end-crystal-glow-seconds: 15

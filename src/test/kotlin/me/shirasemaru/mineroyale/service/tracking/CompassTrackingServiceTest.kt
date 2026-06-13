@@ -22,11 +22,11 @@ import kotlin.test.assertEquals
 class CompassTrackingServiceTest {
 
     @Test
-    fun `start does not schedule locator updates when disabled in config`() {
+    fun `start does not schedule compass updates when compass tracking is disabled in config`() {
         val scheduler = mockk<BukkitScheduler>(relaxed = true)
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = false),
+            configManager = mockConfigManager(enableCompassTracking = false),
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
@@ -36,13 +36,32 @@ class CompassTrackingServiceTest {
     }
 
     @Test
-    fun `start schedules next locator update when enabled in config`() {
+    fun `start schedules next compass update when compass tracking is enabled in config`() {
         val scheduler = mockk<BukkitScheduler>()
         every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
 
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = true),
+            configManager = mockConfigManager(enableCompassTracking = true),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        service.start { emptyList() }
+
+        verify(exactly = 1) { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), 40L) }
+    }
+
+    @Test
+    fun `start schedules compass updates even when player locator bar is disabled`() {
+        val scheduler = mockk<BukkitScheduler>()
+        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk<BukkitTask>(relaxed = true)
+
+        val service = CompassTrackingService(
+            plugin = mockPlugin(scheduler),
+            configManager = mockConfigManager(
+                showPlayerLocatorBar = false,
+                enableCompassTracking = true
+            ),
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
@@ -58,7 +77,7 @@ class CompassTrackingServiceTest {
 
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = true, playerLocatorMaxAlivePlayers = 3),
+            configManager = mockConfigManager(enableCompassTracking = true, playerLocatorMaxAlivePlayers = 3),
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
         val world = mockk<World>()
@@ -84,7 +103,7 @@ class CompassTrackingServiceTest {
 
         val service = CompassTrackingService(
             plugin = mockPlugin(scheduler),
-            configManager = mockConfigManager(showPlayerLocatorBar = true, playerLocatorMaxAlivePlayers = 3),
+            configManager = mockConfigManager(enableCompassTracking = true, playerLocatorMaxAlivePlayers = 3),
             coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
         val world = mockk<World>()
@@ -115,13 +134,15 @@ class CompassTrackingServiceTest {
     }
 
     private fun mockConfigManager(
-        showPlayerLocatorBar: Boolean,
+        showPlayerLocatorBar: Boolean = true,
+        enableCompassTracking: Boolean,
         playerLocatorMaxAlivePlayers: Int = 4
     ): ConfigManager {
         val configManager = mockk<ConfigManager>()
         val gameSettings = mockk<GameSettings>()
         every { configManager.gameSettings } returns gameSettings
         every { gameSettings.showPlayerLocatorBar } returns showPlayerLocatorBar
+        every { gameSettings.enableCompassTracking } returns enableCompassTracking
         every { gameSettings.playerLocatorMaxAlivePlayers } returns playerLocatorMaxAlivePlayers
         return configManager
     }

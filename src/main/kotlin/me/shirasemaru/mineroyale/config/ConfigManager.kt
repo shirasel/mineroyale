@@ -48,6 +48,7 @@ class ConfigManager(private val plugin: JavaPlugin) {
             initialPvpGraceSeconds = config.getInt("game.initial-pvp-grace-seconds", 45),
             showPlayerLocatorBar = config.getBoolean("game.show-player-locator-bar", true),
             playerLocatorMaxAlivePlayers = config.getInt("game.player-locator-max-alive-players", 4),
+            enableCompassTracking = config.getBoolean("game.enable-compass-tracking", true),
             giveInitialCompass = config.getBoolean("game.give-initial-compass", true),
             giveEndCrystal = config.getBoolean("game.give-end-crystal", true),
             endCrystalGlowSeconds = config.getInt("game.end-crystal-glow-seconds", 15).coerceAtLeast(1),
