@@ -3,6 +3,7 @@ package me.shirasemaru.mineroyale
 import me.shirasemaru.mineroyale.bootstrap.PluginScope
 import me.shirasemaru.mineroyale.command.MrCommand
 import me.shirasemaru.mineroyale.command.SpecCommand
+import me.shirasemaru.mineroyale.config.ConfiguredWorldNotFoundException
 import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.listener.EndCrystalListener
 import me.shirasemaru.mineroyale.listener.GameListener
@@ -21,7 +22,16 @@ class Mineroyale : JavaPlugin() {
 
     override fun onEnable() {
         saveDefaultConfig()
-        pluginScope = PluginScope.create(this)
+        try {
+            pluginScope = PluginScope.create(this)
+        } catch (error: ConfiguredWorldNotFoundException) {
+            logger.severe("Mineroyale を有効化できませんでした。")
+            logger.severe("config.yml の world.name='${error.worldName}' に一致するワールドが見つかりません。")
+            logger.severe("server.properties やワールドフォルダ名を確認し、config.yml の world.name を修正してください。")
+            server.pluginManager.disablePlugin(this)
+            return
+        }
+
         gameManager = pluginScope.gameManager
         messageService = pluginScope.messageService
 

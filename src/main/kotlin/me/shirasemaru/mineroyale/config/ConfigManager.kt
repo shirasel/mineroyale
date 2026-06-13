@@ -33,8 +33,11 @@ class ConfigManager(private val plugin: JavaPlugin) {
     }
 
     val gameWorld: World
-        get() = Bukkit.getWorld(worldSettings.name)
-            ?: error("World '${worldSettings.name}' not found")
+        get() = findGameWorld()
+            ?: throw ConfiguredWorldNotFoundException(worldSettings.name)
+
+    fun findGameWorld(): World? =
+        Bukkit.getWorld(worldSettings.name)
 
     fun reload() {
         load()

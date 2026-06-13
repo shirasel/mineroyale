@@ -33,6 +33,7 @@ class PluginScope private constructor(
             val configManager = ConfigManager(plugin).apply { load() }
             val messageService = MessageService()
             val worldProvider = BukkitGameWorldProvider(configManager)
+            worldProvider.require()
             val scoreboardManager = BukkitScoreboardFactory().create()
             val playerRegistry = PlayerRegistry()
             val playerSetupService = PlayerSetupService(configManager)

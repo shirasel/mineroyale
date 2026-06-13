@@ -1,7 +1,7 @@
 package me.shirasemaru.mineroyale.bootstrap
 
+import me.shirasemaru.mineroyale.config.ConfiguredWorldNotFoundException
 import me.shirasemaru.mineroyale.config.ConfigManager
-import org.bukkit.Bukkit
 import org.bukkit.World
 
 interface GameWorldProvider {
@@ -14,8 +14,8 @@ class BukkitGameWorldProvider(
 ) : GameWorldProvider {
 
     override fun find(): World? =
-        Bukkit.getWorld(configManager.worldSettings.name)
+        configManager.findGameWorld()
 
     override fun require(): World =
-        find() ?: error("World '${configManager.worldSettings.name}' not found")
+        find() ?: throw ConfiguredWorldNotFoundException(configManager.worldSettings.name)
 }
