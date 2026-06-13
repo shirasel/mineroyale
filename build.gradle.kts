@@ -10,6 +10,7 @@ version = property("pluginVersion").toString()
 val paperApiVersion = property("paperApiVersion").toString()
 val testPaperApiVersion = property("testPaperApiVersion").toString()
 val runMinecraftVersion = property("runMinecraftVersion").toString()
+val pluginApiVersion = property("pluginApiVersion").toString()
 val targetJavaVersion = property("targetJavaVersion").toString().toInt()
 val junitVersion = property("junitVersion").toString()
 val mockkVersion = property("mockkVersion").toString()
@@ -75,7 +76,10 @@ tasks.test {
 }
 
 tasks.processResources {
-    val props = mapOf("version" to version)
+    val props = mapOf(
+        "version" to version,
+        "pluginApiVersion" to pluginApiVersion
+    )
     inputs.properties(props)
     filteringCharset = "UTF-8"
     filesMatching("plugin.yml") {

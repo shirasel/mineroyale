@@ -1,7 +1,7 @@
 name: mineroyale
-version: "1.1"
+version: "${version}"
 main: me.shirasemaru.mineroyale.Mineroyale
-api-version: "1.21"
+api-version: "${pluginApiVersion}"
 
 commands:
   mr:
