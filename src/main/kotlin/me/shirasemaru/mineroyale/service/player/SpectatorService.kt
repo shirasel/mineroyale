@@ -5,14 +5,20 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
+import org.bukkit.persistence.PersistentDataType
+import org.bukkit.plugin.java.JavaPlugin
 
-class SpectatorService {
+class SpectatorService(
+    plugin: JavaPlugin
+) {
 
     private val navigatorTitle = Component.text("観戦先選択")
+    private val navigatorKey = NamespacedKey(plugin, "spectator_navigator")
 
     fun applySpectatorMode(player: Player) {
         player.gameMode = GameMode.SPECTATOR
@@ -62,7 +68,11 @@ class SpectatorService {
     }
 
     fun isNavigatorRod(item: ItemStack?): Boolean =
-        item != null && item.type == Material.BLAZE_ROD
+        item != null &&
+            item.type == Material.BLAZE_ROD &&
+            item.itemMeta
+                ?.persistentDataContainer
+                ?.has(navigatorKey, PersistentDataType.BYTE) == true
 
     fun isSpectatorMenu(title: Component): Boolean = title == navigatorTitle
 
@@ -71,6 +81,7 @@ class SpectatorService {
         val meta = item.itemMeta
         meta.displayName(Component.text("観戦メニュー", NamedTextColor.GOLD))
         meta.lore(listOf(Component.text("右クリックで観戦先一覧を開く", NamedTextColor.GRAY)))
+        meta.persistentDataContainer.set(navigatorKey, PersistentDataType.BYTE, 1)
         item.itemMeta = meta
         return item
     }

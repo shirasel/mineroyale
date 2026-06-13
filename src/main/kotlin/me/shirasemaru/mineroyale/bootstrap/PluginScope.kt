@@ -36,7 +36,7 @@ class PluginScope private constructor(
             val scoreboardManager = BukkitScoreboardFactory().create()
             val playerRegistry = PlayerRegistry()
             val playerSetupService = PlayerSetupService(configManager)
-            val spectatorService = SpectatorService()
+            val spectatorService = SpectatorService(plugin)
             val countdownService = CountdownService(plugin)
             val matchFlowService = MatchFlowService()
             val victoryService = VictoryService(plugin, messageService)
