@@ -1,7 +1,7 @@
 package me.shirasemaru.mineroyale.service.player
 
+import me.shirasemaru.mineroyale.service.game.MessageService
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
@@ -14,10 +14,10 @@ import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
 
 class SpectatorService(
-    plugin: JavaPlugin
+    plugin: JavaPlugin,
+    private val messageService: MessageService
 ) {
 
-    private val navigatorTitle = Component.text("観戦先選択")
     private val navigatorKey = NamespacedKey(plugin, "spectator_navigator")
 
     fun applySpectatorMode(player: Player) {
@@ -46,7 +46,7 @@ class SpectatorService(
         displayNameProvider: (String) -> Component
     ) {
         val size = ((alivePlayers.size.coerceAtLeast(1) - 1) / 9 + 1).coerceAtMost(6) * 9
-        val inventory = Bukkit.createInventory(null, size, navigatorTitle)
+        val inventory = Bukkit.createInventory(null, size, messageService.spectatorMenuTitle())
 
         alivePlayers.forEachIndexed { index, alivePlayer ->
             if (index < size) {
@@ -74,13 +74,13 @@ class SpectatorService(
                 ?.persistentDataContainer
                 ?.has(navigatorKey, PersistentDataType.BYTE) == true
 
-    fun isSpectatorMenu(title: Component): Boolean = title == navigatorTitle
+    fun isSpectatorMenu(title: Component): Boolean = title == messageService.spectatorMenuTitle()
 
     private fun createNavigatorRod(): ItemStack {
         val item = ItemStack(Material.BLAZE_ROD)
         val meta = item.itemMeta
-        meta.displayName(Component.text("観戦メニュー", NamedTextColor.GOLD))
-        meta.lore(listOf(Component.text("右クリックで観戦先一覧を開く", NamedTextColor.GRAY)))
+        meta.displayName(messageService.spectatorNavigatorDisplayName())
+        meta.lore(messageService.spectatorNavigatorLore())
         meta.persistentDataContainer.set(navigatorKey, PersistentDataType.BYTE, 1)
         item.itemMeta = meta
         return item

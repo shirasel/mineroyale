@@ -1,6 +1,7 @@
 package me.shirasemaru.mineroyale.service.game
 
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.title.Title
 import org.bukkit.Bukkit
 import org.bukkit.Sound
@@ -13,6 +14,15 @@ class MessageService {
 
     fun spectatorHeadDisplayName(targetName: String): Component =
         Component.text("$targetName を観戦")
+
+    fun spectatorMenuTitle(): Component =
+        Component.text("観戦先選択")
+
+    fun spectatorNavigatorDisplayName(): Component =
+        Component.text("観戦メニュー", NamedTextColor.GOLD)
+
+    fun spectatorNavigatorLore(): List<Component> =
+        listOf(Component.text("右クリックで観戦先一覧を開く", NamedTextColor.GRAY))
 
     fun sendPlayersOnlyCommandMessage(sender: CommandSender) {
         sender.sendMessage("このコマンドはプレイヤーのみ使用できます。")

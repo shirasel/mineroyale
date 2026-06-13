@@ -2,6 +2,7 @@ package me.shirasemaru.mineroyale.service.player
 
 import io.mockk.every
 import io.mockk.mockk
+import me.shirasemaru.mineroyale.service.game.MessageService
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.inventory.ItemStack
@@ -17,7 +18,7 @@ class SpectatorServiceTest {
 
     @Test
     fun `isNavigatorRod rejects ordinary blaze rod without plugin marker`() {
-        val service = SpectatorService(mockPlugin())
+        val service = SpectatorService(mockPlugin(), MessageService())
         val item = mockNavigatorCandidate(hasMarker = false)
 
         assertFalse(service.isNavigatorRod(item))
@@ -25,7 +26,7 @@ class SpectatorServiceTest {
 
     @Test
     fun `isNavigatorRod accepts blaze rod with plugin marker`() {
-        val service = SpectatorService(mockPlugin())
+        val service = SpectatorService(mockPlugin(), MessageService())
         val item = mockNavigatorCandidate(hasMarker = true)
 
         assertTrue(service.isNavigatorRod(item))
@@ -33,7 +34,7 @@ class SpectatorServiceTest {
 
     @Test
     fun `isNavigatorRod rejects non blaze rod even with plugin marker`() {
-        val service = SpectatorService(mockPlugin())
+        val service = SpectatorService(mockPlugin(), MessageService())
         val item = mockNavigatorCandidate(
             material = Material.STICK,
             hasMarker = true
