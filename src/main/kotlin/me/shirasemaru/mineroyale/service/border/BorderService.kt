@@ -27,6 +27,8 @@ class BorderService(
     private companion object {
         const val SHRINK_UPDATE_INTERVAL_TICKS = 2L
         const val FINAL_MOVE_UPDATE_INTERVAL_TICKS = 2L
+        const val FINAL_MOVE_ACCELERATION_FACTOR = 0.9
+        const val MIN_FINAL_MOVE_DURATION_SECONDS = 5
     }
 
     private var phasesJob: Job? = null
@@ -242,20 +244,25 @@ class BorderService(
             return
         }
 
-        val totalTicks = duration * 20L
         val updateInterval = FINAL_MOVE_UPDATE_INTERVAL_TICKS
-        val steps = ((totalTicks + updateInterval - 1) / updateInterval).toInt()
+        val minimumDuration = minOf(duration, MIN_FINAL_MOVE_DURATION_SECONDS)
+        var currentDuration = duration
+
+        session.currentPhase = session.totalPhases
         session.phaseState = PhaseState.FINAL_MOVING.displayName
+        session.remainingGameSeconds = 0
         messageService.broadcastFinalMoveStarted()
 
         while (currentCoroutineContext().isActive) {
+            val totalTicks = currentDuration * 20L
+            val steps = ((totalTicks + updateInterval - 1) / updateInterval).toInt()
             val start = border.center
             val targetX = start.x + Random.nextDouble(-range, range)
             val targetZ = start.z + Random.nextDouble(-range, range)
             val moveX = (targetX - start.x) / steps.toDouble()
             val moveZ = (targetZ - start.z) / steps.toDouble()
 
-            startPhaseCountdown(session, duration)
+            startPhaseCountdown(session, currentDuration, updateGameRemaining = false)
 
             repeat(steps) { step ->
                 if (!currentCoroutineContext().isActive) {
@@ -269,14 +276,24 @@ class BorderService(
                 }
             }
 
-            updateRemainingGameSeconds(session)
+            session.remainingGameSeconds = 0
+            currentDuration = acceleratedFinalMoveDuration(currentDuration, minimumDuration)
         }
     }
 
-    private fun startPhaseCountdown(session: GameSession, seconds: Int) {
+    private fun acceleratedFinalMoveDuration(currentDuration: Int, minimumDuration: Int): Int =
+        maxOf((currentDuration * FINAL_MOVE_ACCELERATION_FACTOR).toInt(), minimumDuration)
+
+    private fun startPhaseCountdown(
+        session: GameSession,
+        seconds: Int,
+        updateGameRemaining: Boolean = true
+    ) {
         phaseCountdownJob?.cancel()
         session.remainingPhaseSeconds = seconds
-        updateRemainingGameSeconds(session)
+        if (updateGameRemaining) {
+            updateRemainingGameSeconds(session)
+        }
 
         phaseCountdownJob = coroutineScope.launch {
             repeat(seconds) {
@@ -286,7 +303,9 @@ class BorderService(
                 }
 
                 session.remainingPhaseSeconds--
-                updateRemainingGameSeconds(session)
+                if (updateGameRemaining) {
+                    updateRemainingGameSeconds(session)
+                }
             }
         }
     }

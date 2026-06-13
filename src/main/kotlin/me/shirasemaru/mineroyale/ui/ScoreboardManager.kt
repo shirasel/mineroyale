@@ -2,6 +2,7 @@ package me.shirasemaru.mineroyale.ui
 
 import me.shirasemaru.mineroyale.game.GameSession
 import me.shirasemaru.mineroyale.game.GameState
+import me.shirasemaru.mineroyale.game.PhaseState
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -72,15 +73,28 @@ class ScoreboardManager {
             GameState.ENDING -> "終了演出"
         }
 
+        val isFinalMoving = session.phaseState == PhaseState.FINAL_MOVING.displayName
+        val phaseDisplay = if (isFinalMoving) {
+            "最終"
+        } else {
+            "${session.currentPhase} / ${session.totalPhases}"
+        }
+        val phaseRemainingLabel = if (isFinalMoving) "次の移動" else "残り"
+        val gameRemainingDisplay = if (isFinalMoving) {
+            "最終フェーズ"
+        } else {
+            formatTime(session.remainingGameSeconds)
+        }
+
         return linkedMapOf(
             9 to "§7状態: §e$stateDisplay",
             8 to "§7生存者: §e${session.aliveCount}",
             7 to "§f",
-            6 to "§7フェーズ: §e${session.currentPhase} / ${session.totalPhases}",
+            6 to "§7フェーズ: §e$phaseDisplay",
             5 to "§7進行: §e${session.phaseState}",
-            4 to "§7残り: §e${formatTime(session.remainingPhaseSeconds)}",
+            4 to "§7$phaseRemainingLabel: §e${formatTime(session.remainingPhaseSeconds)}",
             3 to "§r",
-            2 to "§7全体残り: §e${formatTime(session.remainingGameSeconds)}"
+            2 to "§7全体残り: §e$gameRemainingDisplay"
         )
     }
 

@@ -214,6 +214,7 @@ class BorderServiceTest {
 
         assertFalse(completed)
         assertEquals(PhaseState.FINAL_MOVING.displayName, session.phaseState)
+        assertEquals(0, session.remainingGameSeconds)
         verify(exactly = 1) { messageService.broadcastFinalMoveStarted() }
 
         val firstCenter = border.center
@@ -223,6 +224,39 @@ class BorderServiceTest {
         assertFalse(completed)
         assertTrue(border.center.x != firstCenter.x || border.center.z != firstCenter.z)
         assertTrue(session.remainingPhaseSeconds in 0..1)
+        assertEquals(0, session.remainingGameSeconds)
+    }
+
+    @Test
+    fun `runPhases accelerates repeated final move cycles`() {
+        val schedulerDriver = TestSchedulerDriver()
+        val plugin = mockPlugin(schedulerDriver.scheduler)
+        val configManager = mockConfigManager(
+            borderSettings = BorderSettings(
+                warningDistance = 10,
+                warningTime = 5,
+                phases = listOf(PhaseSettings(waitSeconds = 0, durationSeconds = 1, targetSize = 50.0)),
+                finalPhase = FinalPhaseSettings(enabled = true, moveRange = 10.0, moveDurationSeconds = 10),
+                enhancedDamage = EnhancedDamageSettings(enabled = false, baseDamage = 1.0, increasePerSecond = 0.5, maxDamage = 10.0)
+            )
+        )
+        val messageService = mockk<MessageService>(relaxed = true)
+        val service = BorderService(plugin, configManager, messageService, { }, CoroutineScope(Dispatchers.Unconfined))
+        val border = mockBorder(initialSize = 100.0, initialCenterX = 0.0, initialCenterZ = 0.0)
+        val session = GameSession()
+
+        service.runPhases(session, border) { }
+
+        schedulerDriver.advanceTicks(21)
+
+        assertEquals(PhaseState.FINAL_MOVING.displayName, session.phaseState)
+        assertEquals(10, session.remainingPhaseSeconds)
+        assertEquals(0, session.remainingGameSeconds)
+
+        schedulerDriver.advanceTicks(198)
+
+        assertEquals(9, session.remainingPhaseSeconds)
+        assertEquals(0, session.remainingGameSeconds)
     }
 
     private fun mockPlugin(scheduler: BukkitScheduler): JavaPlugin {
