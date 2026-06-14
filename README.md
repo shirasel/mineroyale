@@ -1,26 +1,142 @@
-# 日本語 ver<br>
-・マイクラでバトルロワイヤルします。<br>
-・マインクラフトのアイテムに遵守しています。<br>
-・試合開始時にコンパスが配布されます。それは最も近くのプレイヤーを指します。ドロップしても再配布はありません。<br>
-・試合開始時にランダムで生存者の中から一人を15秒間発光状態にする「エンドクリスタル（発行の岩）」が1つ配布されます。右クリックで使用できます。<br>
-・空腹にはなりません。<br>
-・プレイヤーロケーターバーはコマンドでfalseにしてください。<br>
-・最後の一人になると終了です。<br>
-・エリア収縮もあるので気を付けてください。<br>
-・エリア外はアイテムやブロックを置くことはできますが、壊すことはできないので気をつけてください。<br>
-・エリア外はダメージもくらいますので気をつけてください。<br>
-・倒されるとspectater mode（観戦）になります。自由に観戦できます。<br>
-・spectater mode（観戦）中にアイテム（ブレイズロッド）を右クリック or コマンド /spec で生存者の頭一覧が出るので、それを選択した状態で右クリックでそのプレイヤーへtpできます。<br>
+# MineRoyale
 
-# English ver<br>
-・We follow the standard Minecraft item rules. <br>
-・A compass will be distributed at the start of the match. It points to the nearest player. If you drop it, it will not be redistributed. <br>
-・At the start of the match, one “End Crystal (glowing rock)” will be distributed at random to one survivor, causing them to glow for 15 seconds. You can use it by right-clicking. <br>
-・You will not get hungry. <br>
-・Please set the player locator bar to “false” using a command. <br>
-・The game ends when there is only one player left. <br>
-・Be careful, as the playable area will shrink. <br>
-・You can place items and blocks outside the playable area, but you cannot destroy them, so please be careful. <br>
-・You will take damage outside the area, so please be careful. <br>
-・If you are defeated, you will enter spectator mode. You can freely watch the game. <br>
-・While in spectator mode, right-click the item (End Crystal) or use the command /spec to display a list of survivors' names. Select a player from the list and right-click to teleport to that player. <br>
+Minecraft 上でバトルロワイヤル形式の試合を行う Paper プラグインです。
+プレイヤーはランダムな位置にスポーンし、時間経過で縮小するワールドボーダー内で最後の1人を目指します。
+
+## 対応環境
+
+- Server: Paper 26.1.2 想定
+- Java: 25
+- Plugin name: `mineroyale`
+- Main command: `/mr`
+
+## 主な機能
+
+- `/mr start` でカウントダウン後に試合開始
+- 参加者をランダムな安全地点へテレポート
+- オークの木材 1 スタックを初期配布
+- 設定により初期コンパスを配布
+- 生存者が一定人数以下になると、コンパスが最寄りの生存者を追跡
+- 試合開始時に「発光の岩」を配布し、右クリックで自分以外の生存者1名を一定時間発光
+- PvP 猶予時間あり
+- ワールドボーダーの段階的収縮
+- 最終フェーズではボーダー中心がランダムに揺れ続け、徐々に移動速度が上昇
+- ボーダー外の継続ダメージ
+- ボーダー外でのブロック設置/破壊制限
+- 死亡したプレイヤーは観戦モードへ移行
+- 観戦者はブレイズロッド右クリックまたは `/spec` で観戦先 GUI を開ける
+- 死亡地点にプレイヤー頭付き防具立てを生成
+- 次ゲーム開始時・プラグイン起動時に死亡マーカーを自動削除
+- ネームタグ非表示、実績通知OFF、プレイヤーロケーターバー表示を config で制御
+
+## コマンド
+
+| コマンド | 説明 | 権限 |
+| --- | --- | --- |
+| `/mr start` | 試合開始カウントダウンを開始 | `mineroyale.admin` |
+| `/mr stop` | 実行中の試合を停止 | `mineroyale.admin` |
+| `/mr reload` | config を再読み込み | `mineroyale.admin` |
+| `/spec` | 観戦者用のテレポート GUI を開く | なし |
+
+`mineroyale.admin` はデフォルトで OP に付与されます。
+
+## 基本の流れ
+
+1. サーバに必要人数が参加します。
+2. 管理者が `/mr start` を実行します。
+3. カウントダウン中にスポーン地点を事前生成します。
+4. チャンク先読み後、参加者をランダムな安全地点へテレポートします。
+5. PvP 猶予時間後に戦闘が有効になります。
+6. ボーダーが段階的に縮小します。
+7. 最終フェーズではボーダー中心が揺れ続けます。
+8. 最後の1人が勝者になります。
+
+## 主要設定
+
+```yaml
+game:
+  min-players: 2
+  max-players: 20
+  countdown-seconds: 30
+  initial-pvp-grace-seconds: 45
+  show-player-locator-bar: false
+  enable-compass-tracking: true
+  player-locator-max-alive-players: 4
+  give-initial-compass: true
+  give-end-crystal: true
+  end-crystal-glow-seconds: 15
+  hide-name-tags: true
+  disable-advancement-announcements: true
+  restrict-block-modification-outside-border: true
+```
+
+### コンパスとロケーターバー
+
+- `show-player-locator-bar`: Minecraft 標準のプレイヤーロケーターバーを表示するか
+- `enable-compass-tracking`: 配布コンパスの追跡処理を有効にするか
+- `player-locator-max-alive-players`: 生存者がこの人数以下になったらコンパス追跡を有効化
+
+例: ロケーターバーは非表示、終盤のコンパス追跡だけ有効にする場合
+
+```yaml
+show-player-locator-bar: false
+enable-compass-tracking: true
+player-locator-max-alive-players: 4
+```
+
+## ボーダー設定
+
+```yaml
+world:
+  name: world
+  random-center-range: 3000
+  initial-border-size: 1000
+
+spawn:
+  min-distance: 50
+
+border:
+  warning-distance: 10
+  warning-time: 5
+  final-phase:
+    enable-smooth-move: true
+    move-range: 40
+    move-duration-seconds: 20
+```
+
+- `world.name`: 試合に使うワールド名
+- `random-center-range`: 初期ボーダー中心をランダムに選ぶ範囲
+- `initial-border-size`: 初期ボーダーサイズ
+- `spawn.min-distance`: プレイヤー同士の最低スポーン距離
+- `move-range`: 最終フェーズで中心が揺れる最大距離
+- `move-duration-seconds`: 最終フェーズの最初の移動時間
+
+最終フェーズの移動時間は、1回ごとに約90%へ短縮され、最終的に5秒間隔まで速くなります。
+
+## インストール
+
+1. `build/libs/mineroyale-*.jar` を Paper サーバの `plugins` フォルダへ配置します。
+2. サーバを起動します。
+3. 生成された `plugins/mineroyale/config.yml` を必要に応じて編集します。
+4. `world.name` が実際のワールド名と一致しているか確認します。
+5. `/mr start` で試合を開始します。
+
+`world.name` に一致するワールドが存在しない場合、プラグインは理由をログに出して安全に無効化されます。
+
+## ビルドとテスト
+
+Windows:
+
+```powershell
+.\gradlew.bat test
+.\gradlew.bat shadowJar
+```
+
+Linux / GitHub Actions:
+
+```bash
+./gradlew test
+./gradlew shadowJar
+```
+
+ビルド済み jar は `build/libs/` に出力されます。
