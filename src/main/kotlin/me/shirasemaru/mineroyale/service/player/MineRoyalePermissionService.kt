@@ -32,6 +32,12 @@ class MineRoyalePermissionService(
         save()
     }
 
+    fun revokeAll(player: Player) {
+        permissionsByPlayer.remove(player.uniqueId)
+        namesByPlayer.remove(player.uniqueId)
+        save()
+    }
+
     private fun hasInternal(uuid: UUID, permission: String): Boolean =
         permissionsByPlayer[uuid]?.contains(permission) == true
 

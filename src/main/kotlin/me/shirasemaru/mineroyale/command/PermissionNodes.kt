@@ -7,6 +7,7 @@ object PermissionNodes {
     const val COMMAND_STOP = "mineroyale.command.stop"
     const val COMMAND_RELOAD = "mineroyale.command.reload"
     const val COMMAND_ADDOP = "mineroyale.command.addop"
+    const val COMMAND_DEOP = "mineroyale.command.deop"
 
     fun resolve(input: String): String? =
         when (input.lowercase()) {
@@ -16,6 +17,7 @@ object PermissionNodes {
             "stop", COMMAND_STOP -> COMMAND_STOP
             "reload", COMMAND_RELOAD -> COMMAND_RELOAD
             "addop", COMMAND_ADDOP -> COMMAND_ADDOP
+            "deop", COMMAND_DEOP -> COMMAND_DEOP
             else -> null
         }
 
@@ -27,6 +29,7 @@ object PermissionNodes {
             COMMAND_STOP -> "stop"
             COMMAND_RELOAD -> "reload"
             COMMAND_ADDOP -> "addop"
+            COMMAND_DEOP -> "deop"
             else -> permission
         }
 }

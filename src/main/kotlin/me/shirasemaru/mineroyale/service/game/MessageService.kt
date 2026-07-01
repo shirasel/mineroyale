@@ -35,7 +35,7 @@ class MessageService {
     }
 
     fun sendCommandUsageMessage(sender: CommandSender) {
-        sender.sendMessage("使用方法: /mr <start|stop|reload|addop>")
+        sender.sendMessage("使用方法: /mr <start|stop|reload|addop|deop>")
         playInfoSound(sender)
     }
 
@@ -49,6 +49,11 @@ class MessageService {
         playWarningSound(sender)
     }
 
+    fun sendDeOpUsageMessage(sender: CommandSender) {
+        sender.sendMessage("使用方法: /mr deop <player>")
+        playInfoSound(sender)
+    }
+
     fun sendInvalidMineRoyalePermissionMessage(sender: CommandSender, permission: String) {
         sender.sendMessage("不明な MineRoyale 権限です: $permission")
         playWarningSound(sender)
@@ -56,6 +61,11 @@ class MessageService {
 
     fun sendMineRoyalePermissionGrantedMessage(sender: CommandSender, playerName: String, permission: String) {
         sender.sendMessage("$playerName に MineRoyale 権限 '$permission' を追加しました。")
+        playInfoSound(sender)
+    }
+
+    fun sendMineRoyalePermissionsRevokedMessage(sender: CommandSender, playerName: String) {
+        sender.sendMessage("$playerName から MineRoyale 内部権限を削除しました。")
         playInfoSound(sender)
     }
 

@@ -83,6 +83,17 @@ class MrCommand(
                 addOp(sender, args)
             }
 
+            "deop" -> {
+                if (!permissionService.has(sender, PermissionNodes.ADMIN) &&
+                    !permissionService.has(sender, PermissionNodes.COMMAND_DEOP)
+                ) {
+                    messageService.sendNoPermissionMessage(sender)
+                    return true
+                }
+
+                deOp(sender, args)
+            }
+
             else -> messageService.sendUnknownSubcommandMessage(sender)
         }
 
@@ -96,12 +107,12 @@ class MrCommand(
         args: Array<out String>
     ): List<String> {
         if (args.size == 1) {
-            return listOf("start", "stop", "reload", "addop")
+            return listOf("start", "stop", "reload", "addop", "deop")
                 .filter { it.startsWith(args[0].lowercase()) }
         }
 
         if (args.size == 3 && args[0].equals("addop", ignoreCase = true)) {
-            return listOf("admin", "mr", "start", "stop", "reload", "addop")
+            return listOf("admin", "mr", "start", "stop", "reload", "addop", "deop")
                 .filter { it.startsWith(args[2].lowercase()) }
         }
 
@@ -136,5 +147,22 @@ class MrCommand(
             playerName = target.name,
             permission = PermissionNodes.displayName(permission)
         )
+    }
+
+    private fun deOp(sender: Player, args: Array<out String>) {
+        if (args.size != 2) {
+            messageService.sendDeOpUsageMessage(sender)
+            return
+        }
+
+        val targetName = args[1]
+        val target = Bukkit.getPlayerExact(targetName)
+        if (target == null) {
+            messageService.sendAddOpTargetNotFoundMessage(sender, targetName)
+            return
+        }
+
+        permissionService.revokeAll(target)
+        messageService.sendMineRoyalePermissionsRevokedMessage(sender, target.name)
     }
 }

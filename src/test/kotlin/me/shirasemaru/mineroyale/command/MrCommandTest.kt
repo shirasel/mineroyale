@@ -175,6 +175,34 @@ class MrCommandTest {
         }
     }
 
+    @Test
+    fun `deop command revokes all internal permissions from online player`() {
+        io.mockk.mockkStatic(Bukkit::class)
+
+        val fixture = createFixture(playerSender = true, hasPermission = true)
+        val target = mockk<Player>()
+
+        every { target.name } returns "target"
+        every { Bukkit.getPlayerExact("target") } returns target
+        every { fixture.permissionService.revokeAll(target) } just runs
+        every {
+            fixture.messageService.sendMineRoyalePermissionsRevokedMessage(fixture.sender, "target")
+        } just runs
+
+        val result = fixture.command.onCommand(
+            fixture.sender,
+            fixture.bukkitCommand,
+            "mr",
+            arrayOf("deop", "target")
+        )
+
+        assertTrue(result)
+        verify(exactly = 1) { fixture.permissionService.revokeAll(target) }
+        verify(exactly = 1) {
+            fixture.messageService.sendMineRoyalePermissionsRevokedMessage(fixture.sender, "target")
+        }
+    }
+
     private fun createFixture(playerSender: Boolean, hasPermission: Boolean): Fixture {
         val gameManager = mockk<GameManager>(relaxed = true)
         val messageService = mockk<MessageService>(relaxed = true)

@@ -39,11 +39,12 @@ Minecraft 上でバトルロワイヤル形式の試合を行う Paper プラグ
 | `/mr stop` | 実行中の試合を停止 | `mineroyale.command.stop` |
 | `/mr reload` | config を再読み込み | `mineroyale.command.reload` |
 | `/mr addop <player> <permission>` | MineRoyale 内部権限をオンラインプレイヤーに追加 | `mineroyale.command.addop` |
+| `/mr deop <player>` | MineRoyale 内部権限をオンラインプレイヤーから削除 | `mineroyale.command.deop` |
 | `/spec` | 観戦者用のテレポート GUI を開く | なし |
 
 `mineroyale.admin` は上記の管理コマンド権限をまとめた親権限です。各 MineRoyale 専用権限はデフォルトで OP に付与されます。
 
-`/mr addop` で指定できる権限名は `admin`, `mr`, `start`, `stop`, `reload`, `addop` です。付与内容は `plugins/mineroyale/operators.yml` に保存されます。
+`/mr addop` で指定できる権限名は `admin`, `mr`, `start`, `stop`, `reload`, `addop`, `deop` です。付与内容は `plugins/mineroyale/operators.yml` に保存されます。`/mr deop` は対象プレイヤーの MineRoyale 内部権限をすべて削除します。
 
 ## 基本の流れ
 
