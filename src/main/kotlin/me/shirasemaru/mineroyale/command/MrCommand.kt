@@ -24,7 +24,7 @@ class MrCommand(
             return true
         }
 
-        if (!sender.hasPermission("mineroyale.admin")) {
+        if (!sender.hasPermission(PermissionNodes.ADMIN) && !sender.hasPermission(PermissionNodes.COMMAND_MR)) {
             messageService.sendNoPermissionMessage(sender)
             return true
         }
@@ -36,6 +36,11 @@ class MrCommand(
 
         when (args[0].lowercase()) {
             "start" -> {
+                if (!sender.hasCommandPermission(PermissionNodes.COMMAND_START)) {
+                    messageService.sendNoPermissionMessage(sender)
+                    return true
+                }
+
                 if (!gameManager.canStartNewGame()) {
                     messageService.sendCannotStartMessage(sender)
                     return true
@@ -46,6 +51,11 @@ class MrCommand(
             }
 
             "stop" -> {
+                if (!sender.hasCommandPermission(PermissionNodes.COMMAND_STOP)) {
+                    messageService.sendNoPermissionMessage(sender)
+                    return true
+                }
+
                 if (!gameManager.canStopGame()) {
                     messageService.sendCannotStopMessage(sender)
                     return true
@@ -55,6 +65,11 @@ class MrCommand(
             }
 
             "reload" -> {
+                if (!sender.hasCommandPermission(PermissionNodes.COMMAND_RELOAD)) {
+                    messageService.sendNoPermissionMessage(sender)
+                    return true
+                }
+
                 gameManager.reloadConfig()
                 messageService.sendConfigReloadedMessage(sender)
             }
@@ -78,4 +93,7 @@ class MrCommand(
 
         return emptyList()
     }
+
+    private fun Player.hasCommandPermission(permission: String): Boolean =
+        hasPermission(PermissionNodes.ADMIN) || hasPermission(permission)
 }

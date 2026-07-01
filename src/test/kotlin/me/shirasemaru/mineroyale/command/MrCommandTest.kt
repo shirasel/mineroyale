@@ -140,7 +140,7 @@ class MrCommandTest {
         val messageService = mockk<MessageService>(relaxed = true)
         val sender = if (playerSender) {
             mockk<Player>().also { player ->
-                every { player.hasPermission("mineroyale.admin") } returns hasPermission
+                every { player.hasPermission(any<String>()) } returns hasPermission
             }
         } else {
             mockk<CommandSender>()

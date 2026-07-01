@@ -35,12 +35,12 @@ Minecraft 上でバトルロワイヤル形式の試合を行う Paper プラグ
 
 | コマンド | 説明 | 権限 |
 | --- | --- | --- |
-| `/mr start` | 試合開始カウントダウンを開始 | `mineroyale.admin` |
-| `/mr stop` | 実行中の試合を停止 | `mineroyale.admin` |
-| `/mr reload` | config を再読み込み | `mineroyale.admin` |
+| `/mr start` | 試合開始カウントダウンを開始 | `mineroyale.command.start` |
+| `/mr stop` | 実行中の試合を停止 | `mineroyale.command.stop` |
+| `/mr reload` | config を再読み込み | `mineroyale.command.reload` |
 | `/spec` | 観戦者用のテレポート GUI を開く | なし |
 
-`mineroyale.admin` はデフォルトで OP に付与されます。
+`mineroyale.admin` は上記の管理コマンド権限をまとめた親権限です。各 MineRoyale 専用権限はデフォルトで OP に付与されます。
 
 ## 基本の流れ
 

@@ -7,12 +7,29 @@ commands:
   mr:
     description: MineRoyale 管理コマンド
     usage: /mr <start|stop|reload>
-    permission: mineroyale.admin
+    permission: mineroyale.command.mr
   spec:
     description: 観戦先一覧を開く
     usage: /spec
 
 permissions:
   mineroyale.admin:
-    description: MineRoyale 管理者権限
+    description: MineRoyale 全管理権限
+    default: op
+    children:
+      mineroyale.command.mr: true
+      mineroyale.command.start: true
+      mineroyale.command.stop: true
+      mineroyale.command.reload: true
+  mineroyale.command.mr:
+    description: /mr コマンドを使用できる権限
+    default: op
+  mineroyale.command.start:
+    description: /mr start を使用できる権限
+    default: op
+  mineroyale.command.stop:
+    description: /mr stop を使用できる権限
+    default: op
+  mineroyale.command.reload:
+    description: /mr reload を使用できる権限
     default: op
