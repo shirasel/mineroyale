@@ -41,7 +41,7 @@ class Mineroyale : JavaPlugin() {
         server.pluginManager.registerEvents(SpectatorListener(gameManager), this)
         server.pluginManager.registerEvents(EndCrystalListener(gameManager), this)
 
-        val mrCommand = MrCommand(gameManager, messageService)
+        val mrCommand = MrCommand(gameManager, messageService, pluginScope.permissionService)
         getCommand("mr")?.setExecutor(mrCommand)
         getCommand("mr")?.setTabCompleter(mrCommand)
         getCommand("spec")?.setExecutor(SpecCommand(gameManager, messageService))

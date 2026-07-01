@@ -2,6 +2,8 @@ package me.shirasemaru.mineroyale.command
 
 import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.service.game.MessageService
+import me.shirasemaru.mineroyale.service.player.MineRoyalePermissionService
+import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -10,7 +12,8 @@ import org.bukkit.entity.Player
 
 class MrCommand(
     private val gameManager: GameManager,
-    private val messageService: MessageService
+    private val messageService: MessageService,
+    private val permissionService: MineRoyalePermissionService
 ) : CommandExecutor, TabCompleter {
 
     override fun onCommand(
@@ -21,11 +24,6 @@ class MrCommand(
     ): Boolean {
         if (sender !is Player) {
             messageService.sendPlayersOnlyCommandMessage(sender)
-            return true
-        }
-
-        if (!sender.hasPermission(PermissionNodes.ADMIN) && !sender.hasPermission(PermissionNodes.COMMAND_MR)) {
-            messageService.sendNoPermissionMessage(sender)
             return true
         }
 
@@ -74,6 +72,17 @@ class MrCommand(
                 messageService.sendConfigReloadedMessage(sender)
             }
 
+            "addop" -> {
+                if (!permissionService.has(sender, PermissionNodes.ADMIN) &&
+                    !permissionService.has(sender, PermissionNodes.COMMAND_ADDOP)
+                ) {
+                    messageService.sendNoPermissionMessage(sender)
+                    return true
+                }
+
+                addOp(sender, args)
+            }
+
             else -> messageService.sendUnknownSubcommandMessage(sender)
         }
 
@@ -87,13 +96,45 @@ class MrCommand(
         args: Array<out String>
     ): List<String> {
         if (args.size == 1) {
-            return listOf("start", "stop", "reload")
+            return listOf("start", "stop", "reload", "addop")
                 .filter { it.startsWith(args[0].lowercase()) }
+        }
+
+        if (args.size == 3 && args[0].equals("addop", ignoreCase = true)) {
+            return listOf("admin", "mr", "start", "stop", "reload", "addop")
+                .filter { it.startsWith(args[2].lowercase()) }
         }
 
         return emptyList()
     }
 
     private fun Player.hasCommandPermission(permission: String): Boolean =
-        hasPermission(PermissionNodes.ADMIN) || hasPermission(permission)
+        permissionService.has(this, permission)
+
+    private fun addOp(sender: Player, args: Array<out String>) {
+        if (args.size != 3) {
+            messageService.sendAddOpUsageMessage(sender)
+            return
+        }
+
+        val targetName = args[1]
+        val target = Bukkit.getPlayerExact(targetName)
+        if (target == null) {
+            messageService.sendAddOpTargetNotFoundMessage(sender, targetName)
+            return
+        }
+
+        val permission = PermissionNodes.resolve(args[2])
+        if (permission == null) {
+            messageService.sendInvalidMineRoyalePermissionMessage(sender, args[2])
+            return
+        }
+
+        permissionService.grant(target, permission)
+        messageService.sendMineRoyalePermissionGrantedMessage(
+            sender = sender,
+            playerName = target.name,
+            permission = PermissionNodes.displayName(permission)
+        )
+    }
 }

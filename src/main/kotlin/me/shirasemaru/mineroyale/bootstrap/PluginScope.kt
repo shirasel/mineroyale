@@ -16,6 +16,7 @@ import me.shirasemaru.mineroyale.service.game.MatchLifecycleService
 import me.shirasemaru.mineroyale.service.game.MessageService
 import me.shirasemaru.mineroyale.service.game.VictoryService
 import me.shirasemaru.mineroyale.service.item.EndCrystalService
+import me.shirasemaru.mineroyale.service.player.MineRoyalePermissionService
 import me.shirasemaru.mineroyale.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale.service.player.SpectatorService
@@ -24,6 +25,7 @@ import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
 class PluginScope private constructor(
     val configManager: ConfigManager,
     val messageService: MessageService,
+    val permissionService: MineRoyalePermissionService,
     val coroutineScope: CoroutineScope,
     val gameManager: GameManager
 ) {
@@ -32,6 +34,7 @@ class PluginScope private constructor(
         fun create(plugin: Mineroyale): PluginScope {
             val configManager = ConfigManager(plugin).apply { load() }
             val messageService = MessageService()
+            val permissionService = MineRoyalePermissionService(plugin)
             val worldProvider = BukkitGameWorldProvider(configManager)
             worldProvider.require()
             val scoreboardManager = BukkitScoreboardFactory().create()
@@ -93,6 +96,7 @@ class PluginScope private constructor(
             return PluginScope(
                 configManager = configManager,
                 messageService = messageService,
+                permissionService = permissionService,
                 coroutineScope = coroutineScope,
                 gameManager = gameManager
             )

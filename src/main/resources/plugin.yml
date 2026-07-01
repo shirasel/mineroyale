@@ -6,8 +6,7 @@ api-version: "${pluginApiVersion}"
 commands:
   mr:
     description: MineRoyale 管理コマンド
-    usage: /mr <start|stop|reload>
-    permission: mineroyale.command.mr
+    usage: /mr <start|stop|reload|addop>
   spec:
     description: 観戦先一覧を開く
     usage: /spec
@@ -21,6 +20,7 @@ permissions:
       mineroyale.command.start: true
       mineroyale.command.stop: true
       mineroyale.command.reload: true
+      mineroyale.command.addop: true
   mineroyale.command.mr:
     description: /mr コマンドを使用できる権限
     default: op
@@ -32,4 +32,7 @@ permissions:
     default: op
   mineroyale.command.reload:
     description: /mr reload を使用できる権限
+    default: op
+  mineroyale.command.addop:
+    description: /mr addop を使用できる権限
     default: op

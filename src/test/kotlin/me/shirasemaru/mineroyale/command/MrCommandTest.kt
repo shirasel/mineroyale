@@ -7,14 +7,22 @@ import io.mockk.runs
 import io.mockk.verify
 import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.service.game.MessageService
+import me.shirasemaru.mineroyale.service.player.MineRoyalePermissionService
+import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class MrCommandTest {
+
+    @AfterTest
+    fun tearDown() {
+        io.mockk.unmockkStatic(Bukkit::class)
+    }
 
     @Test
     fun `start command broadcasts countdown request and starts game when start is allowed`() {
@@ -135,23 +143,58 @@ class MrCommandTest {
         assertEquals(listOf("reload"), result)
     }
 
+    @Test
+    fun `addop command grants internal permission to online player`() {
+        io.mockk.mockkStatic(Bukkit::class)
+
+        val fixture = createFixture(playerSender = true, hasPermission = true)
+        val target = mockk<Player>()
+
+        every { target.name } returns "target"
+        every { Bukkit.getPlayerExact("target") } returns target
+        every { fixture.permissionService.grant(target, PermissionNodes.COMMAND_START) } just runs
+        every {
+            fixture.messageService.sendMineRoyalePermissionGrantedMessage(
+                fixture.sender,
+                "target",
+                "start"
+            )
+        } just runs
+
+        val result = fixture.command.onCommand(
+            fixture.sender,
+            fixture.bukkitCommand,
+            "mr",
+            arrayOf("addop", "target", "start")
+        )
+
+        assertTrue(result)
+        verify(exactly = 1) { fixture.permissionService.grant(target, PermissionNodes.COMMAND_START) }
+        verify(exactly = 1) {
+            fixture.messageService.sendMineRoyalePermissionGrantedMessage(fixture.sender, "target", "start")
+        }
+    }
+
     private fun createFixture(playerSender: Boolean, hasPermission: Boolean): Fixture {
         val gameManager = mockk<GameManager>(relaxed = true)
         val messageService = mockk<MessageService>(relaxed = true)
+        val permissionService = mockk<MineRoyalePermissionService>()
         val sender = if (playerSender) {
             mockk<Player>().also { player ->
                 every { player.hasPermission(any<String>()) } returns hasPermission
+                every { permissionService.has(player, any()) } returns hasPermission
             }
         } else {
             mockk<CommandSender>()
         }
         val bukkitCommand = mockk<Command>()
-        val command = MrCommand(gameManager, messageService)
+        val command = MrCommand(gameManager, messageService, permissionService)
 
         return Fixture(
             command = command,
             gameManager = gameManager,
             messageService = messageService,
+            permissionService = permissionService,
             sender = sender,
             bukkitCommand = bukkitCommand
         )
@@ -161,6 +204,7 @@ class MrCommandTest {
         val command: MrCommand,
         val gameManager: GameManager,
         val messageService: MessageService,
+        val permissionService: MineRoyalePermissionService,
         val sender: CommandSender,
         val bukkitCommand: Command
     )

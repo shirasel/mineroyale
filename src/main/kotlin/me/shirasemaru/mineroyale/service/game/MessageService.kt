@@ -35,7 +35,27 @@ class MessageService {
     }
 
     fun sendCommandUsageMessage(sender: CommandSender) {
-        sender.sendMessage("使用方法: /mr <start|stop|reload>")
+        sender.sendMessage("使用方法: /mr <start|stop|reload|addop>")
+        playInfoSound(sender)
+    }
+
+    fun sendAddOpUsageMessage(sender: CommandSender) {
+        sender.sendMessage("使用方法: /mr addop <player> <admin|mr|start|stop|reload|addop>")
+        playInfoSound(sender)
+    }
+
+    fun sendAddOpTargetNotFoundMessage(sender: CommandSender, playerName: String) {
+        sender.sendMessage("$playerName はオンラインではありません。")
+        playWarningSound(sender)
+    }
+
+    fun sendInvalidMineRoyalePermissionMessage(sender: CommandSender, permission: String) {
+        sender.sendMessage("不明な MineRoyale 権限です: $permission")
+        playWarningSound(sender)
+    }
+
+    fun sendMineRoyalePermissionGrantedMessage(sender: CommandSender, playerName: String, permission: String) {
+        sender.sendMessage("$playerName に MineRoyale 権限 '$permission' を追加しました。")
         playInfoSound(sender)
     }
 
