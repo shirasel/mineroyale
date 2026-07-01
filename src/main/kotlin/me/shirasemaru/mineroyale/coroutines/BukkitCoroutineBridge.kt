@@ -17,21 +17,21 @@ class BukkitDispatcher(
 }
 
 suspend fun JavaPlugin.nextTick() =
-    suspendCancellableCoroutine<Unit> { continuation ->
+    suspendCancellableCoroutine { continuation ->
         server.scheduler.runTask(this, Runnable {
             continuation.resume(Unit)
         })
     }
 
 suspend fun JavaPlugin.waitTicks(ticks: Long) =
-    suspendCancellableCoroutine<Unit> { continuation ->
+    suspendCancellableCoroutine { continuation ->
         server.scheduler.runTaskLater(this, Runnable {
             continuation.resume(Unit)
         }, ticks)
     }
 
-suspend fun JavaPlugin.awaitChunkPreload(locations: Collection<Location>) =
-    suspendCancellableCoroutine<Unit> { continuation ->
+suspend fun awaitChunkPreload(locations: Collection<Location>) =
+    suspendCancellableCoroutine { continuation ->
         val futures = locations
             .mapNotNull { location -> location.world?.getChunkAtAsync(location, true) }
             .distinct()

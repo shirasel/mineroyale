@@ -100,7 +100,7 @@ class MessageService {
     }
 
     fun broadcastTooManyPlayers(maxPlayers: Int) {
-        Bukkit.broadcast(Component.text("最大参加人数は ${maxPlayers} 人です。"))
+        Bukkit.broadcast(Component.text("最大参加人数は $maxPlayers 人です。"))
         playWarningSound(Bukkit.getOnlinePlayers())
     }
 
@@ -171,17 +171,17 @@ class MessageService {
     }
 
     fun sendEndCrystalUsed(player: Player, targetName: String, seconds: Int) {
-        player.sendMessage("$targetName を ${seconds} 秒間発光させました。")
+        player.sendMessage("$targetName を $seconds 秒間発光させました。")
         playAlertSound(listOf(player))
     }
 
     fun sendEndCrystalMarked(player: Player, seconds: Int) {
-        player.sendMessage("エンドクリスタルの効果で ${seconds} 秒間発光状態になりました。")
+        player.sendMessage("エンドクリスタルの効果で $seconds 秒間発光状態になりました。")
         playAlertSound(listOf(player))
     }
 
     fun broadcastPvpGracePeriod(seconds: Int) {
-        Bukkit.broadcast(Component.text("PvP は ${seconds} 秒後に有効になります。"))
+        Bukkit.broadcast(Component.text("PvP は $seconds 秒後に有効になります。"))
         playAlertSound(Bukkit.getOnlinePlayers())
     }
 
@@ -196,17 +196,17 @@ class MessageService {
         Bukkit.broadcast(Component.text("========== フェーズ $phaseNumber =========="))
 
         if (waitSeconds > 0) {
-            Bukkit.broadcast(Component.text("${waitSeconds} 秒後にエリア収縮が始まります。"))
+            Bukkit.broadcast(Component.text("$waitSeconds 秒後にエリア収縮が始まります。"))
         }
 
-        Bukkit.broadcast(Component.text("ボーダーは ${targetSize} まで収縮します。"))
-        Bukkit.broadcast(Component.text("収縮時間: ${durationSeconds} 秒"))
+        Bukkit.broadcast(Component.text("ボーダーは $targetSize まで収縮します。"))
+        Bukkit.broadcast(Component.text("収縮時間: $durationSeconds 秒"))
         playAlertSound(Bukkit.getOnlinePlayers())
     }
 
     fun broadcastBorderShrinkStarted(phaseNumber: Int, targetSize: Double, durationSeconds: Int) {
         Bukkit.broadcast(Component.text("フェーズ $phaseNumber のエリア収縮が始まりました。"))
-        Bukkit.broadcast(Component.text("ボーダーは ${targetSize} まで ${durationSeconds} 秒で収縮します。"))
+        Bukkit.broadcast(Component.text("ボーダーは $targetSize まで $durationSeconds 秒で収縮します。"))
         playAlertSound(Bukkit.getOnlinePlayers())
     }
 
@@ -216,14 +216,14 @@ class MessageService {
     }
 
     fun broadcastVictory(winnerName: String) {
-        Bukkit.broadcast(Component.text("${winnerName} が勝利しました。"))
+        Bukkit.broadcast(Component.text("$winnerName が勝利しました。"))
         playVictorySound(Bukkit.getOnlinePlayers())
     }
 
     fun victoryTitle(winnerName: String): Title =
         Title.title(
             Component.text("VICTORY!"),
-            Component.text("${winnerName} の勝利"),
+            Component.text("$winnerName の勝利"),
             Title.Times.times(
                 Duration.ofMillis(500),
                 Duration.ofSeconds(3),

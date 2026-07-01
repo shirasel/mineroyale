@@ -65,7 +65,7 @@ class BorderService(
         border.setCenter(plan.centerX, plan.centerZ)
         border.size = plan.size
         border.warningDistance = configManager.borderSettings.warningDistance
-        border.setWarningTimeTicks(configManager.borderSettings.warningTime * 20)
+        border.warningTimeTicks = configManager.borderSettings.warningTime * 20
 
         calculateGameEndTime()
         updateRemainingGameSeconds(session)

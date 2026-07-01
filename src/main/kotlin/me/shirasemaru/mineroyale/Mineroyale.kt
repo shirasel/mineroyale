@@ -42,8 +42,10 @@ class Mineroyale : JavaPlugin() {
         server.pluginManager.registerEvents(EndCrystalListener(gameManager), this)
 
         val mrCommand = MrCommand(gameManager, messageService, pluginScope.permissionService)
-        getCommand("mr")?.setExecutor(mrCommand)
-        getCommand("mr")?.setTabCompleter(mrCommand)
+        getCommand("mr")?.apply {
+            setExecutor(mrCommand)
+            tabCompleter = mrCommand
+        }
         getCommand("spec")?.setExecutor(SpecCommand(gameManager, messageService))
 
         logger.info("Mineroyale を有効化しました。")

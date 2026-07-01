@@ -35,12 +35,6 @@ class PlayerSetupService(
         player.teleport(location)
     }
 
-    fun prepareMatchPlayers(spawnMap: Map<Player, Location>) {
-        spawnMap.forEach { (player, location) ->
-            prepareMatchPlayer(player, location)
-        }
-    }
-
     fun resetAllOnlinePlayersToLobby() {
         Bukkit.getOnlinePlayers().forEach { player ->
             resetPlayerState(player)

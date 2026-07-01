@@ -20,6 +20,7 @@ import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import java.util.logging.Level
 
 class GameManager(
     private val plugin: JavaPlugin,
@@ -75,8 +76,7 @@ class GameManager(
                         startCountdown()
                     } catch (_: CancellationException) {
                     } catch (error: Throwable) {
-                        plugin.logger.severe("Failed to start match: ${error.message}")
-                        error.printStackTrace()
+                        plugin.logger.log(Level.SEVERE, "Failed to start match.", error)
                         matchFlowService.cancelCountdown(session)
                     }
                 }
@@ -147,8 +147,7 @@ class GameManager(
                 matchLifecycleService.finishMatch(session, winner)
             } catch (_: CancellationException) {
             } catch (error: Throwable) {
-                plugin.logger.severe("Failed to finish match: ${error.message}")
-                error.printStackTrace()
+                plugin.logger.log(Level.SEVERE, "Failed to finish match.", error)
             }
         }
     }

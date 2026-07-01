@@ -59,8 +59,9 @@ class MineRoyalePermissionService(
     }
 
     private fun save() {
-        if (!plugin.dataFolder.exists()) {
-            plugin.dataFolder.mkdirs()
+        if (!plugin.dataFolder.exists() && !plugin.dataFolder.mkdirs()) {
+            plugin.logger.warning("Failed to create plugin data folder: ${plugin.dataFolder.absolutePath}")
+            return
         }
 
         val config = YamlConfiguration()

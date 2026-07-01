@@ -12,7 +12,7 @@ import kotlin.math.abs
 
 class BorderManager(
     plugin: JavaPlugin,
-    private val configManager: ConfigManager,
+    configManager: ConfigManager,
     private val worldProvider: GameWorldProvider,
     messageService: MessageService,
     onPvpStateChanged: (Boolean) -> Unit,
@@ -38,9 +38,6 @@ class BorderManager(
     }
 
     fun isPvpEnabled(): Boolean = borderService.isPvpEnabled()
-
-    fun generateRandomSpawnLocations(players: List<Player>) =
-        spawnPointService.generateRandomSpawnLocations(players, border)
 
     fun createInitialBorderPlan(): MatchBorderPlan =
         borderService.createInitialBorderPlan()

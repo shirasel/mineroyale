@@ -45,8 +45,6 @@ class MatchLifecycleService(
     private val matchScope: MatchScope
         get() = matchScopeHolder.current
 
-    fun currentSession(): GameSession = matchScope.session
-
     fun setVictoryRespawnLocation(location: Location?) {
         matchScope.victoryRespawnLocation = location
     }
@@ -100,7 +98,7 @@ class MatchLifecycleService(
         val borderPlan = consumePreparedBorderPlan()
         val spawnMap = consumePreparedSpawnLocations(players, borderPlan)
 
-        plugin.awaitChunkPreload(spawnMap.values)
+        awaitChunkPreload(spawnMap.values)
         plugin.nextTick()
         borderManager.initialize(session, borderPlan)
         prepareMatchPlayersInBatches(spawnMap)

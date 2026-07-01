@@ -71,6 +71,9 @@ tasks.test {
         "-Xshare:off",
         "-XX:+EnableDynamicAgentLoading"
     )
+    if (targetJavaVersion >= 24) {
+        jvmArgs("--sun-misc-unsafe-memory-access=allow")
+    }
     val testRunId = providers.gradleProperty("testRunId").orNull ?: "default"
     binaryResultsDirectory.set(layout.buildDirectory.dir("test-results-jvm/$testRunId/binary"))
 }
