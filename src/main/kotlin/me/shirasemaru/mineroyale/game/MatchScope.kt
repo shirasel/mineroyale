@@ -1,9 +1,9 @@
 package me.shirasemaru.mineroyale.game
 
+import kotlinx.coroutines.Job
 import me.shirasemaru.mineroyale.service.border.MatchBorderPlan
 import org.bukkit.Location
 import org.bukkit.entity.Player
-import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 
 class MatchScope(
@@ -13,7 +13,7 @@ class MatchScope(
     var preparedSpawnPlayerIds: List<UUID>? = null
     var preparedBorderPlan: MatchBorderPlan? = null
     var victoryRespawnLocation: Location? = null
-    var scoreboardTask: BukkitTask? = null
+    var scoreboardJob: Job? = null
     var ruleSnapshot: MatchRuleSnapshot? = null
 
     fun clearPreparedSpawns() {
@@ -26,8 +26,8 @@ class MatchScope(
         clearPreparedSpawns()
         victoryRespawnLocation = null
         ruleSnapshot = null
-        scoreboardTask?.cancel()
-        scoreboardTask = null
+        scoreboardJob?.cancel()
+        scoreboardJob = null
         session.resetToWaiting()
     }
 }

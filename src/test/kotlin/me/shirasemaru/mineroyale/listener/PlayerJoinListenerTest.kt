@@ -201,7 +201,8 @@ class PlayerJoinListenerTest {
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
             matchScopeHolder = matchScopeHolder,
-            onlinePlayerProvider = EmptyOnlinePlayerProvider
+            onlinePlayerProvider = EmptyOnlinePlayerProvider,
+            coroutineScope = coroutineScope
         )
 
         val gameManager = GameManager(

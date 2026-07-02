@@ -1,10 +1,15 @@
 package me.shirasemaru.mineroyale.service.game
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.coroutines.awaitChunkPreload
 import me.shirasemaru.mineroyale.coroutines.nextTick
+import me.shirasemaru.mineroyale.coroutines.waitTicks
 import me.shirasemaru.mineroyale.game.MatchScope
 import me.shirasemaru.mineroyale.game.MatchScopeFactory
 import me.shirasemaru.mineroyale.game.MatchScopeHolder
@@ -15,7 +20,6 @@ import me.shirasemaru.mineroyale.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale.ui.ScoreboardManager
-import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -36,6 +40,7 @@ class MatchLifecycleService(
     private val matchScopeFactory: MatchScopeFactory,
     private val matchScopeHolder: MatchScopeHolder,
     private val onlinePlayerProvider: OnlinePlayerProvider,
+    private val coroutineScope: CoroutineScope,
     private val gameRuleService: GameRuleService = GameRuleService()
 ) {
 
@@ -202,18 +207,22 @@ class MatchLifecycleService(
     }
 
     private fun startScoreboardTask(session: GameSession) {
-        matchScope.scoreboardTask?.cancel()
+        matchScope.scoreboardJob?.cancel()
 
-        matchScope.scoreboardTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
-            if (!matchFlowService.canFinish(session)) return@Runnable
+        matchScope.scoreboardJob = coroutineScope.launch {
+            while (currentCoroutineContext().isActive) {
+                plugin.waitTicks(20L)
 
-            session.aliveCount = playerRegistry.aliveCount()
-            scoreboardManager.update(session)
-        }, 0L, 20L)
+                if (matchFlowService.canFinish(session)) {
+                    session.aliveCount = playerRegistry.aliveCount()
+                    scoreboardManager.update(session)
+                }
+            }
+        }
     }
 
     private fun stopScoreboardTask() {
-        matchScope.scoreboardTask?.cancel()
-        matchScope.scoreboardTask = null
+        matchScope.scoreboardJob?.cancel()
+        matchScope.scoreboardJob = null
     }
 }

@@ -5,9 +5,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.runs
-import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -37,7 +35,6 @@ import me.shirasemaru.mineroyale.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale.service.player.SpectatorService
 import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale.ui.ScoreboardManager
-import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
@@ -50,32 +47,22 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.PlayerInventory
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
-import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class GameManagerStartFlowTest {
 
-    @AfterTest
-    fun tearDown() {
-        unmockkStatic(Bukkit::class)
-    }
-
     @Test
     fun `startGame moves from countdown to running when countdown completes`() {
-        mockkStatic(Bukkit::class)
-
         val playerB = mockPlayer("bravo")
         val playerA = mockPlayer("alpha")
         val participants = linkedSetOf(playerB, playerA)
         val fixture = createFixture(participants)
         val countdownResult = CompletableDeferred<CountdownService.CountdownResult>()
 
-        every { Bukkit.getScheduler() } returns fixture.scheduler
         coEvery {
             fixture.countdownService.run(
                 session = any(),
@@ -114,14 +101,12 @@ class GameManagerStartFlowTest {
         verify(timeout = 1_000, exactly = 1) { fixture.endCrystalService.distribute(any()) }
         verify(timeout = 1_000, exactly = 1) { fixture.messageService.logMatchStarted(any()) }
         verify(timeout = 1_000, exactly = 1) { fixture.compassTrackingService.start(any()) }
-        verify(timeout = 1_000, exactly = 1) { fixture.scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) }
     }
 
     private fun createFixture(onlinePlayers: Collection<Player> = emptyList()): StartFlowFixture {
         val plugin = mockk<Mineroyale>()
         val server = mockk<Server>()
         val scheduler = mockk<BukkitScheduler>()
-        val scoreboardTask = mockk<BukkitTask>()
         val border = mockBorder()
         val world = mockWorld(border)
         val configManager = mockk<ConfigManager>()
@@ -146,7 +131,6 @@ class GameManagerStartFlowTest {
         every { plugin.logger } returns Logger.getLogger("test")
         every { plugin.namespace() } returns "mineroyale"
         every { server.scheduler } returns scheduler
-        every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), any<Long>(), any<Long>()) } returns scoreboardTask
         every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
             (invocation.args[1] as Runnable).run()
             mockk(relaxed = true)
@@ -225,7 +209,8 @@ class GameManagerStartFlowTest {
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
             matchScopeHolder = matchScopeHolder,
-            onlinePlayerProvider = StaticOnlinePlayerProvider(onlinePlayers)
+            onlinePlayerProvider = StaticOnlinePlayerProvider(onlinePlayers),
+            coroutineScope = coroutineScope
         )
 
         val gameManager = GameManager(
@@ -252,7 +237,6 @@ class GameManagerStartFlowTest {
             countdownService = countdownService,
             messageService = messageService,
             compassTrackingService = compassTrackingService,
-            scheduler = scheduler,
             endCrystalService = endCrystalService
         )
     }
@@ -310,7 +294,6 @@ class GameManagerStartFlowTest {
         val countdownService: CountdownService,
         val messageService: MessageService,
         val compassTrackingService: CompassTrackingService,
-        val scheduler: BukkitScheduler,
         val endCrystalService: EndCrystalService
     )
 

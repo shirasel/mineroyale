@@ -5,10 +5,10 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.runs
-import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
 import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
@@ -24,7 +24,6 @@ import me.shirasemaru.mineroyale.service.player.PlayerRegistry
 import me.shirasemaru.mineroyale.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale.ui.ScoreboardManager
-import org.bukkit.Bukkit
 import org.bukkit.Chunk
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -33,20 +32,13 @@ import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitScheduler
-import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MatchLifecycleServiceTest {
-
-    @AfterTest
-    fun tearDown() {
-        unmockkStatic(Bukkit::class)
-    }
 
     @Test
     fun `getEligiblePlayers filters out spectators and sorts by name`() {
@@ -71,16 +63,6 @@ class MatchLifecycleServiceTest {
 
     @Test
     fun `startMatch moves session to running and initializes collaborators`() {
-        mockkStatic(Bukkit::class)
-        val scheduler = mockk<BukkitScheduler>()
-        val task = mockk<BukkitTask>()
-        every { Bukkit.getScheduler() } returns scheduler
-        every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) } returns task
-        every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
-            (invocation.args[1] as Runnable).run()
-            mockk(relaxed = true)
-        }
-
         val borderManager = mockk<BorderManager>()
         val playerRegistry = mockk<PlayerRegistry>()
         val playerSetupService = mockk<PlayerSetupService>()
@@ -124,7 +106,8 @@ class MatchLifecycleServiceTest {
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
             matchScopeHolder = matchScopeHolder,
-            onlinePlayerProvider = StaticOnlinePlayerProvider()
+            onlinePlayerProvider = StaticOnlinePlayerProvider(),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
         val session = GameSession()
@@ -147,16 +130,6 @@ class MatchLifecycleServiceTest {
 
     @Test
     fun `prepared spawn locations reuse the same border plan at match start`() {
-        mockkStatic(Bukkit::class)
-        val scheduler = mockk<BukkitScheduler>()
-        val task = mockk<BukkitTask>()
-        every { Bukkit.getScheduler() } returns scheduler
-        every { scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) } returns task
-        every { scheduler.runTask(any<JavaPlugin>(), any<Runnable>()) } answers {
-            (invocation.args[1] as Runnable).run()
-            mockk(relaxed = true)
-        }
-
         val borderManager = mockk<BorderManager>()
         val playerRegistry = mockk<PlayerRegistry>()
         val playerSetupService = mockk<PlayerSetupService>()
@@ -205,7 +178,8 @@ class MatchLifecycleServiceTest {
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
             matchScopeHolder = matchScopeHolder,
-            onlinePlayerProvider = StaticOnlinePlayerProvider()
+            onlinePlayerProvider = StaticOnlinePlayerProvider(),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
         service.prepareSpawnLocations(listOf(player))
@@ -261,7 +235,8 @@ class MatchLifecycleServiceTest {
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
             matchScopeHolder = matchScopeHolder,
-            onlinePlayerProvider = StaticOnlinePlayerProvider()
+            onlinePlayerProvider = StaticOnlinePlayerProvider(),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
         val session = matchScopeHolder.current.session.apply {
@@ -327,7 +302,8 @@ class MatchLifecycleServiceTest {
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
             matchScopeHolder = matchScopeHolder,
-            onlinePlayerProvider = StaticOnlinePlayerProvider()
+            onlinePlayerProvider = StaticOnlinePlayerProvider(),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
         val session = matchScopeHolder.current.session.apply {
@@ -365,7 +341,8 @@ class MatchLifecycleServiceTest {
             matchFlowService = mockk(),
             matchScopeFactory = MatchScopeFactory(),
             matchScopeHolder = MatchScopeHolder(MatchScopeFactory().create()),
-            onlinePlayerProvider = StaticOnlinePlayerProvider(onlinePlayers)
+            onlinePlayerProvider = StaticOnlinePlayerProvider(onlinePlayers),
+            coroutineScope = CoroutineScope(Dispatchers.Unconfined)
         )
 
     private fun mockConfigManager(): ConfigManager {
@@ -398,6 +375,7 @@ class MatchLifecycleServiceTest {
             (invocation.args[1] as Runnable).run()
             mockk(relaxed = true)
         }
+        every { scheduler.runTaskLater(any<JavaPlugin>(), any<Runnable>(), any<Long>()) } returns mockk(relaxed = true)
         return plugin
     }
 
