@@ -98,7 +98,9 @@ class MatchLifecycleService(
         val borderPlan = consumePreparedBorderPlan()
         val spawnMap = consumePreparedSpawnLocations(players, borderPlan)
 
-        awaitChunkPreload(spawnMap.values)
+        awaitChunkPreload(spawnMap.values) { error ->
+            plugin.logger.warning("Failed to preload match start chunks: ${error.message}")
+        }
         plugin.nextTick()
         borderManager.initialize(session, borderPlan)
         prepareMatchPlayersInBatches(spawnMap)

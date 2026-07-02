@@ -5,6 +5,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Location
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 
@@ -30,17 +31,32 @@ suspend fun JavaPlugin.waitTicks(ticks: Long) =
         }, ticks)
     }
 
-suspend fun awaitChunkPreload(locations: Collection<Location>) =
+suspend fun awaitChunkPreload(
+    locations: Collection<Location>,
+    onFailure: (Throwable) -> Unit = {}
+) =
     suspendCancellableCoroutine { continuation ->
-        val futures = locations
-            .mapNotNull { location -> location.world?.getChunkAtAsync(location, true) }
+        val futures = locations.mapNotNull { location ->
+            runCatching {
+                location.world?.getChunkAtAsync(location, true)
+            }.onFailure(onFailure)
+                .getOrNull()
+        }
             .distinct()
 
-        if (futures.isEmpty() || futures.all { it.isDone }) {
+        if (futures.isEmpty()) {
             continuation.resume(Unit)
             return@suspendCancellableCoroutine
         }
 
         CompletableFuture.allOf(*futures.toTypedArray())
-            .thenRun { continuation.resume(Unit) }
+            .whenComplete { _, error ->
+                error?.let { onFailure(it.unwrapCompletionException()) }
+                if (continuation.isActive) {
+                    continuation.resume(Unit)
+                }
+            }
     }
+
+private fun Throwable.unwrapCompletionException(): Throwable =
+    if (this is CompletionException && cause != null) cause!! else this
