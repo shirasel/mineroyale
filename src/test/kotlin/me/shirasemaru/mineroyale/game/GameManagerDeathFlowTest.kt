@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale.Mineroyale
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.service.border.BorderManager
 import me.shirasemaru.mineroyale.service.game.CountdownService
@@ -172,7 +173,8 @@ class GameManagerDeathFlowTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = EmptyOnlinePlayerProvider
         )
 
         val gameManager = GameManager(
@@ -271,4 +273,8 @@ class GameManagerDeathFlowTest {
         val deathMarkerService: DeathMarkerService,
         val border: WorldBorder
     )
+
+    private object EmptyOnlinePlayerProvider : OnlinePlayerProvider {
+        override val onlinePlayers: Collection<Player> = emptyList()
+    }
 }

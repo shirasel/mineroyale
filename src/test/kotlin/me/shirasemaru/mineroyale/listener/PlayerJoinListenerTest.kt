@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale.Mineroyale
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.config.BorderSettings
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.config.EnhancedDamageSettings
@@ -199,7 +200,8 @@ class PlayerJoinListenerTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = EmptyOnlinePlayerProvider
         )
 
         val gameManager = GameManager(
@@ -270,4 +272,8 @@ class PlayerJoinListenerTest {
         val spectatorService: SpectatorService,
         val messageService: MessageService
     )
+
+    private object EmptyOnlinePlayerProvider : OnlinePlayerProvider {
+        override val onlinePlayers: Collection<Player> = emptyList()
+    }
 }

@@ -81,6 +81,7 @@ class PluginScope private constructor(
                 matchFlowService = matchFlowService,
                 matchScopeFactory = matchScopeFactory,
                 matchScopeHolder = matchScopeHolder,
+                onlinePlayerProvider = onlinePlayerProvider,
                 gameRuleService = gameRuleService
             )
             val gameManager = GameManager(

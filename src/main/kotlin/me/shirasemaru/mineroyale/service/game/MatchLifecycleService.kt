@@ -1,6 +1,7 @@
 package me.shirasemaru.mineroyale.service.game
 
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.coroutines.awaitChunkPreload
 import me.shirasemaru.mineroyale.coroutines.nextTick
@@ -34,6 +35,7 @@ class MatchLifecycleService(
     private val matchFlowService: MatchFlowService,
     private val matchScopeFactory: MatchScopeFactory,
     private val matchScopeHolder: MatchScopeHolder,
+    private val onlinePlayerProvider: OnlinePlayerProvider,
     private val gameRuleService: GameRuleService = GameRuleService()
 ) {
 
@@ -56,7 +58,7 @@ class MatchLifecycleService(
         matchScope.victoryRespawnLocation?.clone()
 
     fun getEligiblePlayers(): List<Player> =
-        Bukkit.getOnlinePlayers()
+        onlinePlayerProvider.onlinePlayers
             .filter { !playerRegistry.isSpectator(it) }
             .sortedBy { it.name }
 

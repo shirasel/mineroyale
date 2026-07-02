@@ -11,6 +11,7 @@ import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.config.GameSettings
 import me.shirasemaru.mineroyale.game.GameSession
@@ -49,18 +50,19 @@ class MatchLifecycleServiceTest {
 
     @Test
     fun `getEligiblePlayers filters out spectators and sorts by name`() {
-        mockkStatic(Bukkit::class)
         val activeB = mockPlayer("bravo", GameMode.SURVIVAL)
         val spectator = mockPlayer("charlie", GameMode.ADVENTURE)
         val activeA = mockPlayer("alpha", GameMode.ADVENTURE)
         val playerRegistry = mockk<PlayerRegistry>()
 
-        every { Bukkit.getOnlinePlayers() } returns linkedSetOf(activeB, spectator, activeA)
         every { playerRegistry.isSpectator(spectator) } returns true
         every { playerRegistry.isSpectator(activeA) } returns false
         every { playerRegistry.isSpectator(activeB) } returns false
 
-        val service = createService(playerRegistry)
+        val service = createService(
+            playerRegistry = playerRegistry,
+            onlinePlayers = linkedSetOf(activeB, spectator, activeA)
+        )
 
         val result = service.getEligiblePlayers()
 
@@ -121,7 +123,8 @@ class MatchLifecycleServiceTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = StaticOnlinePlayerProvider()
         )
 
         val session = GameSession()
@@ -201,7 +204,8 @@ class MatchLifecycleServiceTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = StaticOnlinePlayerProvider()
         )
 
         service.prepareSpawnLocations(listOf(player))
@@ -256,7 +260,8 @@ class MatchLifecycleServiceTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = StaticOnlinePlayerProvider()
         )
 
         val session = matchScopeHolder.current.session.apply {
@@ -321,7 +326,8 @@ class MatchLifecycleServiceTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = StaticOnlinePlayerProvider()
         )
 
         val session = matchScopeHolder.current.session.apply {
@@ -340,7 +346,10 @@ class MatchLifecycleServiceTest {
         verify { playerRegistry.clear() }
     }
 
-    private fun createService(playerRegistry: PlayerRegistry = mockk()): MatchLifecycleService =
+    private fun createService(
+        playerRegistry: PlayerRegistry = mockk(),
+        onlinePlayers: Collection<Player> = emptyList()
+    ): MatchLifecycleService =
         MatchLifecycleService(
             plugin = mockPlugin(),
             configManager = mockConfigManager(),
@@ -355,7 +364,8 @@ class MatchLifecycleServiceTest {
             messageService = mockk(),
             matchFlowService = mockk(),
             matchScopeFactory = MatchScopeFactory(),
-            matchScopeHolder = MatchScopeHolder(MatchScopeFactory().create())
+            matchScopeHolder = MatchScopeHolder(MatchScopeFactory().create()),
+            onlinePlayerProvider = StaticOnlinePlayerProvider(onlinePlayers)
         )
 
     private fun mockConfigManager(): ConfigManager {
@@ -399,4 +409,8 @@ class MatchLifecycleServiceTest {
         every { player.isOnline } returns true
         return player
     }
+
+    private class StaticOnlinePlayerProvider(
+        override val onlinePlayers: Collection<Player> = emptyList()
+    ) : OnlinePlayerProvider
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale.Mineroyale
 import me.shirasemaru.mineroyale.bootstrap.GameWorldProvider
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.config.BorderSettings
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.config.EnhancedDamageSettings
@@ -68,13 +69,12 @@ class GameManagerStartFlowTest {
     fun `startGame moves from countdown to running when countdown completes`() {
         mockkStatic(Bukkit::class)
 
-        val fixture = createFixture()
         val playerB = mockPlayer("bravo")
         val playerA = mockPlayer("alpha")
         val participants = linkedSetOf(playerB, playerA)
+        val fixture = createFixture(participants)
         val countdownResult = CompletableDeferred<CountdownService.CountdownResult>()
 
-        every { Bukkit.getOnlinePlayers() } returns participants
         every { Bukkit.getScheduler() } returns fixture.scheduler
         coEvery {
             fixture.countdownService.run(
@@ -117,7 +117,7 @@ class GameManagerStartFlowTest {
         verify(timeout = 1_000, exactly = 1) { fixture.scheduler.runTaskTimer(any<JavaPlugin>(), any<Runnable>(), 0L, 20L) }
     }
 
-    private fun createFixture(): StartFlowFixture {
+    private fun createFixture(onlinePlayers: Collection<Player> = emptyList()): StartFlowFixture {
         val plugin = mockk<Mineroyale>()
         val server = mockk<Server>()
         val scheduler = mockk<BukkitScheduler>()
@@ -224,7 +224,8 @@ class GameManagerStartFlowTest {
             messageService = messageService,
             matchFlowService = matchFlowService,
             matchScopeFactory = matchScopeFactory,
-            matchScopeHolder = matchScopeHolder
+            matchScopeHolder = matchScopeHolder,
+            onlinePlayerProvider = StaticOnlinePlayerProvider(onlinePlayers)
         )
 
         val gameManager = GameManager(
@@ -312,6 +313,10 @@ class GameManagerStartFlowTest {
         val scheduler: BukkitScheduler,
         val endCrystalService: EndCrystalService
     )
+
+    private class StaticOnlinePlayerProvider(
+        override val onlinePlayers: Collection<Player>
+    ) : OnlinePlayerProvider
 }
 
 private fun sessionOf(gameManager: GameManager): GameSession {
