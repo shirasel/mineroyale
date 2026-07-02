@@ -1,7 +1,8 @@
 package me.shirasemaru.mineroyale.service.player
 
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
+import me.shirasemaru.mineroyale.bootstrap.ScoreboardProvider
 import me.shirasemaru.mineroyale.config.ConfigManager
-import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
@@ -10,17 +11,19 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 class PlayerSetupService(
-    private val configManager: ConfigManager
+    private val configManager: ConfigManager,
+    private val onlinePlayerProvider: OnlinePlayerProvider,
+    private val scoreboardProvider: ScoreboardProvider
 ) {
 
     fun preparePlayerForLobby(player: Player) {
-        player.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
+        player.scoreboard = scoreboardProvider.mainScoreboard
         resetPlayerState(player)
         player.gameMode = GameMode.SURVIVAL
     }
 
     fun prepareLateJoinSpectator(player: Player) {
-        player.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
+        player.scoreboard = scoreboardProvider.mainScoreboard
         resetPlayerState(player)
         player.gameMode = GameMode.SPECTATOR
     }
@@ -36,7 +39,7 @@ class PlayerSetupService(
     }
 
     fun resetAllOnlinePlayersToLobby() {
-        Bukkit.getOnlinePlayers().forEach { player ->
+        onlinePlayerProvider.onlinePlayers.forEach { player ->
             resetPlayerState(player)
             player.gameMode = GameMode.ADVENTURE
         }
