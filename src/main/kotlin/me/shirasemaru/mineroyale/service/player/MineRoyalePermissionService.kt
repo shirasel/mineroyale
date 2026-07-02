@@ -26,15 +26,23 @@ class MineRoyalePermissionService(
             hasInternal(player.uniqueId, permission)
 
     fun grant(player: Player, permission: String) {
-        val permissions = permissionsByPlayer.getOrPut(player.uniqueId) { linkedSetOf() }
+        grant(player.uniqueId, player.name, permission)
+    }
+
+    fun grant(uuid: UUID, playerName: String, permission: String) {
+        val permissions = permissionsByPlayer.getOrPut(uuid) { linkedSetOf() }
         permissions += permission
-        namesByPlayer[player.uniqueId] = player.name
+        namesByPlayer[uuid] = playerName
         save()
     }
 
     fun revokeAll(player: Player) {
-        permissionsByPlayer.remove(player.uniqueId)
-        namesByPlayer.remove(player.uniqueId)
+        revokeAll(player.uniqueId)
+    }
+
+    fun revokeAll(uuid: UUID) {
+        permissionsByPlayer.remove(uuid)
+        namesByPlayer.remove(uuid)
         save()
     }
 

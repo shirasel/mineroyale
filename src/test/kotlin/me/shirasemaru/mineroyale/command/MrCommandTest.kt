@@ -9,9 +9,11 @@ import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.service.game.MessageService
 import me.shirasemaru.mineroyale.service.player.MineRoyalePermissionService
 import org.bukkit.Bukkit
+import org.bukkit.OfflinePlayer
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -144,15 +146,17 @@ class MrCommandTest {
     }
 
     @Test
-    fun `addop command grants internal permission to online player`() {
+    fun `addop command grants internal permission to offline player`() {
         io.mockk.mockkStatic(Bukkit::class)
 
         val fixture = createFixture(playerSender = true, hasPermission = true)
-        val target = mockk<Player>()
+        val target = mockk<OfflinePlayer>()
+        val targetId = UUID.nameUUIDFromBytes("target".toByteArray())
 
         every { target.name } returns "target"
-        every { Bukkit.getPlayerExact("target") } returns target
-        every { fixture.permissionService.grant(target, PermissionNodes.COMMAND_START) } just runs
+        every { target.uniqueId } returns targetId
+        every { Bukkit.getOfflinePlayer("target") } returns target
+        every { fixture.permissionService.grant(targetId, "target", PermissionNodes.COMMAND_START) } just runs
         every {
             fixture.messageService.sendMineRoyalePermissionGrantedMessage(
                 fixture.sender,
@@ -169,22 +173,24 @@ class MrCommandTest {
         )
 
         assertTrue(result)
-        verify(exactly = 1) { fixture.permissionService.grant(target, PermissionNodes.COMMAND_START) }
+        verify(exactly = 1) { fixture.permissionService.grant(targetId, "target", PermissionNodes.COMMAND_START) }
         verify(exactly = 1) {
             fixture.messageService.sendMineRoyalePermissionGrantedMessage(fixture.sender, "target", "start")
         }
     }
 
     @Test
-    fun `deop command revokes all internal permissions from online player`() {
+    fun `deop command revokes all internal permissions from offline player`() {
         io.mockk.mockkStatic(Bukkit::class)
 
         val fixture = createFixture(playerSender = true, hasPermission = true)
-        val target = mockk<Player>()
+        val target = mockk<OfflinePlayer>()
+        val targetId = UUID.nameUUIDFromBytes("target".toByteArray())
 
         every { target.name } returns "target"
-        every { Bukkit.getPlayerExact("target") } returns target
-        every { fixture.permissionService.revokeAll(target) } just runs
+        every { target.uniqueId } returns targetId
+        every { Bukkit.getOfflinePlayer("target") } returns target
+        every { fixture.permissionService.revokeAll(targetId) } just runs
         every {
             fixture.messageService.sendMineRoyalePermissionsRevokedMessage(fixture.sender, "target")
         } just runs
@@ -197,9 +203,43 @@ class MrCommandTest {
         )
 
         assertTrue(result)
-        verify(exactly = 1) { fixture.permissionService.revokeAll(target) }
+        verify(exactly = 1) { fixture.permissionService.revokeAll(targetId) }
         verify(exactly = 1) {
             fixture.messageService.sendMineRoyalePermissionsRevokedMessage(fixture.sender, "target")
+        }
+    }
+
+    @Test
+    fun `addop command uses typed name when offline player name is unavailable`() {
+        io.mockk.mockkStatic(Bukkit::class)
+
+        val fixture = createFixture(playerSender = true, hasPermission = true)
+        val target = mockk<OfflinePlayer>()
+        val targetId = UUID.nameUUIDFromBytes("unknown".toByteArray())
+
+        every { target.name } returns null
+        every { target.uniqueId } returns targetId
+        every { Bukkit.getOfflinePlayer("unknown") } returns target
+        every { fixture.permissionService.grant(targetId, "unknown", PermissionNodes.COMMAND_RELOAD) } just runs
+        every {
+            fixture.messageService.sendMineRoyalePermissionGrantedMessage(
+                fixture.sender,
+                "unknown",
+                "reload"
+            )
+        } just runs
+
+        val result = fixture.command.onCommand(
+            fixture.sender,
+            fixture.bukkitCommand,
+            "mr",
+            arrayOf("addop", "unknown", "reload")
+        )
+
+        assertTrue(result)
+        verify(exactly = 1) { fixture.permissionService.grant(targetId, "unknown", PermissionNodes.COMMAND_RELOAD) }
+        verify(exactly = 1) {
+            fixture.messageService.sendMineRoyalePermissionGrantedMessage(fixture.sender, "unknown", "reload")
         }
     }
 

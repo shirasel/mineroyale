@@ -4,6 +4,7 @@ import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.service.game.MessageService
 import me.shirasemaru.mineroyale.service.player.MineRoyalePermissionService
 import org.bukkit.Bukkit
+import org.bukkit.OfflinePlayer
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -129,11 +130,8 @@ class MrCommand(
         }
 
         val targetName = args[1]
-        val target = Bukkit.getPlayerExact(targetName)
-        if (target == null) {
-            messageService.sendAddOpTargetNotFoundMessage(sender, targetName)
-            return
-        }
+        val target = Bukkit.getOfflinePlayer(targetName)
+        val resolvedTargetName = target.displayNameOr(targetName)
 
         val permission = PermissionNodes.resolve(args[2])
         if (permission == null) {
@@ -141,10 +139,10 @@ class MrCommand(
             return
         }
 
-        permissionService.grant(target, permission)
+        permissionService.grant(target.uniqueId, resolvedTargetName, permission)
         messageService.sendMineRoyalePermissionGrantedMessage(
             sender = sender,
-            playerName = target.name,
+            playerName = resolvedTargetName,
             permission = PermissionNodes.displayName(permission)
         )
     }
@@ -156,13 +154,13 @@ class MrCommand(
         }
 
         val targetName = args[1]
-        val target = Bukkit.getPlayerExact(targetName)
-        if (target == null) {
-            messageService.sendAddOpTargetNotFoundMessage(sender, targetName)
-            return
-        }
+        val target = Bukkit.getOfflinePlayer(targetName)
+        val resolvedTargetName = target.displayNameOr(targetName)
 
-        permissionService.revokeAll(target)
-        messageService.sendMineRoyalePermissionsRevokedMessage(sender, target.name)
+        permissionService.revokeAll(target.uniqueId)
+        messageService.sendMineRoyalePermissionsRevokedMessage(sender, resolvedTargetName)
     }
+
+    private fun OfflinePlayer.displayNameOr(fallback: String): String =
+        name ?: fallback
 }
