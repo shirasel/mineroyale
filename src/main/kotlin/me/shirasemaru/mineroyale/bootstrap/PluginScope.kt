@@ -48,7 +48,7 @@ class PluginScope private constructor(
             val countdownService = CountdownService(plugin)
             val matchFlowService = MatchFlowService()
             val gameRuleService = GameRuleService()
-            val victoryService = VictoryService(plugin, messageService)
+            val victoryService = VictoryService(plugin, messageService, onlinePlayerProvider)
             val endCrystalService = EndCrystalService(plugin, configManager, messageService)
             val deathMarkerService = DeathMarkerService(plugin)
             deathMarkerService.clearMarkers()

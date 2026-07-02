@@ -3,16 +3,14 @@ package me.shirasemaru.mineroyale.service.game
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.runs
-import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import net.kyori.adventure.title.Title
-import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Server
 import org.bukkit.World
@@ -24,22 +22,14 @@ import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class VictoryServiceTest {
 
-    @AfterTest
-    fun tearDown() {
-        unmockkStatic(Bukkit::class)
-    }
-
     @Test
     fun `playVictory teleports players in batches and finishes after a delay`() {
-        mockkStatic(Bukkit::class)
-
         val schedulerDriver = TestSchedulerDriver()
         val scheduler = schedulerDriver.scheduler
         val server = mockk<Server>()
@@ -59,8 +49,6 @@ class VictoryServiceTest {
         val started = CountDownLatch(1)
         var failure: Throwable? = null
 
-        every { Bukkit.getScheduler() } returns scheduler
-        every { Bukkit.getOnlinePlayers() } returns onlinePlayers
         every { plugin.server } returns server
         every { server.scheduler } returns scheduler
         every { messageService.broadcastVictory("winner") } answers { started.countDown() }
@@ -73,7 +61,7 @@ class VictoryServiceTest {
             }
         }
 
-        val service = VictoryService(plugin, messageService)
+        val service = VictoryService(plugin, messageService, StaticOnlinePlayerProvider(onlinePlayers))
 
         val job = CoroutineScope(Dispatchers.Unconfined).launch {
             try {
@@ -102,6 +90,10 @@ class VictoryServiceTest {
         )
         verify(exactly = 3) { world.spawn(any<Location>(), Firework::class.java) }
     }
+
+    private class StaticOnlinePlayerProvider(
+        override val onlinePlayers: Collection<Player>
+    ) : OnlinePlayerProvider
 
     private fun mockPlayer(name: String, world: World): Player {
         val player = mockk<Player>()

@@ -1,7 +1,7 @@
 package me.shirasemaru.mineroyale.service.game
 
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.coroutines.waitTicks
-import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.FireworkEffect
 import org.bukkit.Location
@@ -11,7 +11,8 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class VictoryService(
     private val plugin: JavaPlugin,
-    private val messageService: MessageService
+    private val messageService: MessageService,
+    private val onlinePlayerProvider: OnlinePlayerProvider
 ) {
 
     private companion object {
@@ -26,10 +27,11 @@ class VictoryService(
         messageService.broadcastVictory(winner.name)
 
         val title = messageService.victoryTitle(winner.name)
-        Bukkit.getOnlinePlayers().forEach { it.showTitle(title) }
+        val onlinePlayers = onlinePlayerProvider.onlinePlayers.toList()
+        onlinePlayers.forEach { it.showTitle(title) }
 
         val location = winner.location.clone().add(0.0, 1.0, 0.0)
-        teleportPlayersInBatches(Bukkit.getOnlinePlayers().toList(), location)
+        teleportPlayersInBatches(onlinePlayers, location)
         scheduleFireworks(winner)
         plugin.waitTicks(RESET_DELAY_AFTER_EFFECTS_TICKS)
     }
