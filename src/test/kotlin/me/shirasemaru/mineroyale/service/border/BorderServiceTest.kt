@@ -259,6 +259,38 @@ class BorderServiceTest {
         assertEquals(0, session.remainingGameSeconds)
     }
 
+    @Test
+    fun `runPhases keeps final move center inside configured random center range`() {
+        val schedulerDriver = TestSchedulerDriver()
+        val plugin = mockPlugin(schedulerDriver.scheduler)
+        val configManager = mockConfigManager(
+            borderSettings = BorderSettings(
+                warningDistance = 10,
+                warningTime = 5,
+                phases = listOf(PhaseSettings(waitSeconds = 0, durationSeconds = 1, targetSize = 50.0)),
+                finalPhase = FinalPhaseSettings(enabled = true, moveRange = 500.0, moveDurationSeconds = 1),
+                enhancedDamage = EnhancedDamageSettings(enabled = false, baseDamage = 1.0, increasePerSecond = 0.5, maxDamage = 10.0)
+            ),
+            worldSettings = WorldSettings(
+                name = "world",
+                randomCenterRange = 100.0,
+                initialBorderSize = 50.0
+            )
+        )
+        val messageService = mockk<MessageService>(relaxed = true)
+        val service = BorderService(plugin, configManager, messageService, { }, CoroutineScope(Dispatchers.Unconfined))
+        val border = mockBorder(initialSize = 100.0, initialCenterX = 95.0, initialCenterZ = -95.0)
+        val session = GameSession()
+
+        service.runPhases(session, border) { }
+
+        schedulerDriver.advanceTicks(200)
+
+        assertTrue(border.center.x in -100.0..100.0)
+        assertTrue(border.center.z in -100.0..100.0)
+        assertEquals(PhaseState.FINAL_MOVING.displayName, session.phaseState)
+    }
+
     private fun mockPlugin(scheduler: BukkitScheduler): JavaPlugin {
         val server = mockk<Server>()
         val plugin = mockk<JavaPlugin>()

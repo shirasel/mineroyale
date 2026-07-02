@@ -257,8 +257,8 @@ class BorderService(
             val totalTicks = currentDuration * 20L
             val steps = ((totalTicks + updateInterval - 1) / updateInterval).toInt()
             val start = border.center
-            val targetX = start.x + Random.nextDouble(-range, range)
-            val targetZ = start.z + Random.nextDouble(-range, range)
+            val targetX = finalMoveTargetCoordinate(start.x, range)
+            val targetZ = finalMoveTargetCoordinate(start.z, range)
             val moveX = (targetX - start.x) / steps.toDouble()
             val moveZ = (targetZ - start.z) / steps.toDouble()
 
@@ -283,6 +283,12 @@ class BorderService(
 
     private fun acceleratedFinalMoveDuration(currentDuration: Int, minimumDuration: Int): Int =
         maxOf((currentDuration * FINAL_MOVE_ACCELERATION_FACTOR).toInt(), minimumDuration)
+
+    private fun finalMoveTargetCoordinate(current: Double, moveRange: Double): Double {
+        val worldLimit = configManager.worldSettings.randomCenterRange
+        val target = current + Random.nextDouble(-moveRange, moveRange)
+        return target.coerceIn(-worldLimit, worldLimit)
+    }
 
     private fun startPhaseCountdown(
         session: GameSession,
