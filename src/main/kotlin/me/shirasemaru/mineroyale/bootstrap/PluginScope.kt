@@ -11,6 +11,7 @@ import me.shirasemaru.mineroyale.game.MatchScopeHolder
 import me.shirasemaru.mineroyale.service.border.BorderManager
 import me.shirasemaru.mineroyale.service.game.CountdownService
 import me.shirasemaru.mineroyale.service.game.DeathMarkerService
+import me.shirasemaru.mineroyale.service.game.GameRuleService
 import me.shirasemaru.mineroyale.service.game.MatchFlowService
 import me.shirasemaru.mineroyale.service.game.MatchLifecycleService
 import me.shirasemaru.mineroyale.service.game.MessageService
@@ -43,6 +44,7 @@ class PluginScope private constructor(
             val spectatorService = SpectatorService(plugin, messageService)
             val countdownService = CountdownService(plugin)
             val matchFlowService = MatchFlowService()
+            val gameRuleService = GameRuleService()
             val victoryService = VictoryService(plugin, messageService)
             val endCrystalService = EndCrystalService(plugin, configManager, messageService)
             val deathMarkerService = DeathMarkerService(plugin)
@@ -74,7 +76,8 @@ class PluginScope private constructor(
                 messageService = messageService,
                 matchFlowService = matchFlowService,
                 matchScopeFactory = matchScopeFactory,
-                matchScopeHolder = matchScopeHolder
+                matchScopeHolder = matchScopeHolder,
+                gameRuleService = gameRuleService
             )
             val gameManager = GameManager(
                 plugin = plugin,

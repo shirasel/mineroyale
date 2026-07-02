@@ -8,7 +8,6 @@ import me.shirasemaru.mineroyale.game.MatchScope
 import me.shirasemaru.mineroyale.game.MatchScopeFactory
 import me.shirasemaru.mineroyale.game.MatchScopeHolder
 import me.shirasemaru.mineroyale.game.GameSession
-import me.shirasemaru.mineroyale.game.MatchRuleSnapshot
 import me.shirasemaru.mineroyale.service.border.BorderManager
 import me.shirasemaru.mineroyale.service.border.MatchBorderPlan
 import me.shirasemaru.mineroyale.service.player.PlayerRegistry
@@ -16,7 +15,6 @@ import me.shirasemaru.mineroyale.service.player.PlayerSetupService
 import me.shirasemaru.mineroyale.service.tracking.CompassTrackingService
 import me.shirasemaru.mineroyale.ui.ScoreboardManager
 import org.bukkit.Bukkit
-import org.bukkit.GameRule
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
@@ -35,7 +33,8 @@ class MatchLifecycleService(
     private val messageService: MessageService,
     private val matchFlowService: MatchFlowService,
     private val matchScopeFactory: MatchScopeFactory,
-    private val matchScopeHolder: MatchScopeHolder
+    private val matchScopeHolder: MatchScopeHolder,
+    private val gameRuleService: GameRuleService = GameRuleService()
 ) {
 
     private companion object {
@@ -188,44 +187,15 @@ class MatchLifecycleService(
 
     private fun applyMatchRules() {
         scoreboardManager.setNameTagsHidden(configManager.gameSettings.hideNameTags)
-        val world = worldProvider.require()
-        val originalLocatorBar = locatorBarRule()?.let { locatorBarRule ->
-            world.getGameRuleValue(locatorBarRule).also {
-                world.setGameRule(locatorBarRule, configManager.gameSettings.showPlayerLocatorBar)
-            }
-        }
-
-        val originalAdvancementAnnouncements =
-            if (!configManager.gameSettings.disableAdvancementAnnouncements) {
-                null
-            } else {
-                showAdvancementMessagesRule()?.let { rule ->
-                    world.getGameRuleValue(rule).also {
-                        world.setGameRule(rule, false)
-                    }
-                }
-            }
-
-        matchScope.ruleSnapshot = MatchRuleSnapshot(
-            locatorBar = originalLocatorBar,
-            advancementAnnouncements = originalAdvancementAnnouncements
+        matchScope.ruleSnapshot = gameRuleService.applyMatchRules(
+            world = worldProvider.require(),
+            settings = configManager.gameSettings
         )
     }
 
     private fun restoreMatchRules() {
         scoreboardManager.setNameTagsHidden(false)
-        val snapshot = matchScope.ruleSnapshot
-        snapshot?.locatorBar?.let {
-            locatorBarRule()?.let { locatorBarRule ->
-                worldProvider.require().setGameRule(locatorBarRule, it)
-            }
-        }
-
-        snapshot?.advancementAnnouncements?.let {
-            showAdvancementMessagesRule()?.let { rule ->
-                worldProvider.require().setGameRule(rule, it)
-            }
-        }
+        gameRuleService.restoreMatchRules(worldProvider.require(), matchScope.ruleSnapshot)
         matchScope.ruleSnapshot = null
     }
 
@@ -244,20 +214,4 @@ class MatchLifecycleService(
         matchScope.scoreboardTask?.cancel()
         matchScope.scoreboardTask = null
     }
-
-    private fun locatorBarRule(): GameRule<Boolean>? =
-        runCatching {
-            @Suppress("UNCHECKED_CAST")
-            Class.forName("org.bukkit.GameRules")
-                .getField("LOCATOR_BAR")
-                .get(null) as GameRule<Boolean>
-        }.getOrNull()
-
-    private fun showAdvancementMessagesRule(): GameRule<Boolean>? =
-        runCatching {
-            @Suppress("UNCHECKED_CAST")
-            Class.forName("org.bukkit.GameRules")
-                .getField("SHOW_ADVANCEMENT_MESSAGES")
-                .get(null) as GameRule<Boolean>
-        }.getOrNull()
 }
