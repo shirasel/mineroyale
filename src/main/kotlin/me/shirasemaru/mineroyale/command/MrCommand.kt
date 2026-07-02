@@ -1,9 +1,9 @@
 package me.shirasemaru.mineroyale.command
 
+import me.shirasemaru.mineroyale.bootstrap.OfflinePlayerResolver
 import me.shirasemaru.mineroyale.game.GameManager
 import me.shirasemaru.mineroyale.service.game.MessageService
 import me.shirasemaru.mineroyale.service.player.MineRoyalePermissionService
-import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
@@ -14,7 +14,8 @@ import org.bukkit.entity.Player
 class MrCommand(
     private val gameManager: GameManager,
     private val messageService: MessageService,
-    private val permissionService: MineRoyalePermissionService
+    private val permissionService: MineRoyalePermissionService,
+    private val offlinePlayerResolver: OfflinePlayerResolver
 ) : CommandExecutor, TabCompleter {
 
     override fun onCommand(
@@ -130,7 +131,7 @@ class MrCommand(
         }
 
         val targetName = args[1]
-        val target = Bukkit.getOfflinePlayer(targetName)
+        val target = offlinePlayerResolver.resolve(targetName)
         val resolvedTargetName = target.displayNameOr(targetName)
 
         val permission = PermissionNodes.resolve(args[2])
@@ -154,7 +155,7 @@ class MrCommand(
         }
 
         val targetName = args[1]
-        val target = Bukkit.getOfflinePlayer(targetName)
+        val target = offlinePlayerResolver.resolve(targetName)
         val resolvedTargetName = target.displayNameOr(targetName)
 
         permissionService.revokeAll(target.uniqueId)

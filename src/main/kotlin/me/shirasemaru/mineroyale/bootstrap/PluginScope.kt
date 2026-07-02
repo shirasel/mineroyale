@@ -27,6 +27,7 @@ class PluginScope private constructor(
     val configManager: ConfigManager,
     val messageService: MessageService,
     val permissionService: MineRoyalePermissionService,
+    val offlinePlayerResolver: OfflinePlayerResolver,
     val coroutineScope: CoroutineScope,
     val gameManager: GameManager
 ) {
@@ -35,6 +36,7 @@ class PluginScope private constructor(
         fun create(plugin: Mineroyale): PluginScope {
             val configManager = ConfigManager(plugin).apply { load() }
             val onlinePlayerProvider = BukkitOnlinePlayerProvider()
+            val offlinePlayerResolver = BukkitOfflinePlayerResolver()
             val messageService = MessageService(onlinePlayerProvider)
             val permissionService = MineRoyalePermissionService(plugin)
             val worldProvider = BukkitGameWorldProvider(configManager)
@@ -101,6 +103,7 @@ class PluginScope private constructor(
                 configManager = configManager,
                 messageService = messageService,
                 permissionService = permissionService,
+                offlinePlayerResolver = offlinePlayerResolver,
                 coroutineScope = coroutineScope,
                 gameManager = gameManager
             )
