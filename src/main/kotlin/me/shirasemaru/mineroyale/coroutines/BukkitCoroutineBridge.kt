@@ -59,4 +59,4 @@ suspend fun awaitChunkPreload(
     }
 
 private fun Throwable.unwrapCompletionException(): Throwable =
-    if (this is CompletionException && cause != null) cause!! else this
+    if (this is CompletionException) cause ?: this else this
