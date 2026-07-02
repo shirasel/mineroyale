@@ -270,12 +270,16 @@ class BorderService(
                 }
 
                 val center = border.center
-                border.setCenter(center.x + moveX, center.z + moveZ)
+                border.setCenter(
+                    clampFinalMoveCenter(center.x + moveX),
+                    clampFinalMoveCenter(center.z + moveZ)
+                )
                 if (step < steps - 1) {
                     plugin.waitTicks(updateInterval)
                 }
             }
 
+            border.setCenter(targetX, targetZ)
             session.remainingGameSeconds = 0
             currentDuration = acceleratedFinalMoveDuration(currentDuration, minimumDuration)
         }
@@ -288,6 +292,11 @@ class BorderService(
         val worldLimit = configManager.worldSettings.randomCenterRange
         val target = current + Random.nextDouble(-moveRange, moveRange)
         return target.coerceIn(-worldLimit, worldLimit)
+    }
+
+    private fun clampFinalMoveCenter(coordinate: Double): Double {
+        val worldLimit = configManager.worldSettings.randomCenterRange
+        return coordinate.coerceIn(-worldLimit, worldLimit)
     }
 
     private fun startPhaseCountdown(

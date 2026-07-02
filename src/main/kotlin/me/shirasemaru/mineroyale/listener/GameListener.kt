@@ -1,8 +1,10 @@
 package me.shirasemaru.mineroyale.listener
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import me.shirasemaru.mineroyale.config.ConfigManager
+import me.shirasemaru.mineroyale.coroutines.waitTicks
 import me.shirasemaru.mineroyale.game.GameManager
-import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.entity.Player
@@ -24,7 +26,8 @@ import java.util.UUID
 class GameListener(
     private val plugin: JavaPlugin,
     private val configManager: ConfigManager,
-    private val gameManager: GameManager
+    private val gameManager: GameManager,
+    private val coroutineScope: CoroutineScope
 ) : Listener {
 
     private val deathLocations = HashMap<UUID, Location>()
@@ -36,11 +39,10 @@ class GameListener(
         val player = event.entity
         deathLocations[player.uniqueId] = player.location.clone()
 
-        Bukkit.getScheduler().runTaskLater(
-            plugin,
-            Runnable { gameManager.handlePlayerDeath(player, deathLocations[player.uniqueId]) },
-            1L
-        )
+        coroutineScope.launch {
+            plugin.waitTicks(1L)
+            gameManager.handlePlayerDeath(player, deathLocations[player.uniqueId])
+        }
     }
 
     @EventHandler

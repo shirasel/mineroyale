@@ -37,7 +37,10 @@ class Mineroyale : JavaPlugin() {
 
         server.pluginManager.registerEvents(PlayerJoinListener(gameManager), this)
         server.pluginManager.registerEvents(HealthRegainListener(gameManager), this)
-        server.pluginManager.registerEvents(GameListener(this, pluginScope.configManager, gameManager), this)
+        server.pluginManager.registerEvents(
+            GameListener(this, pluginScope.configManager, gameManager, pluginScope.coroutineScope),
+            this
+        )
         server.pluginManager.registerEvents(SpectatorListener(gameManager), this)
         server.pluginManager.registerEvents(EndCrystalListener(gameManager), this)
 

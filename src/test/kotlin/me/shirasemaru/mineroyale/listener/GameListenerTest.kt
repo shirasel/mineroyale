@@ -2,15 +2,15 @@ package me.shirasemaru.mineroyale.listener
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import me.shirasemaru.mineroyale.config.ConfigManager
 import me.shirasemaru.mineroyale.config.GameSettings
 import me.shirasemaru.mineroyale.game.GameManager
-import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
+import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.entity.ArmorStand
@@ -31,33 +31,27 @@ import org.bukkit.projectiles.ProjectileSource
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class GameListenerTest {
 
-    @AfterTest
-    fun tearDown() {
-        unmockkStatic(Bukkit::class)
-    }
-
     @Test
     fun `onDeath schedules handlePlayerDeath for next tick while game is running`() {
-        mockkStatic(Bukkit::class)
-
         val plugin = mockk<JavaPlugin>()
+        val server = mockk<Server>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
         val scheduler = mockk<BukkitScheduler>()
         val task = mockk<BukkitTask>(relaxed = true)
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val player = mockPlayer()
         val deathLocation = Location(mockk<World>(), 10.0, 64.0, -5.0)
         val event = mockk<PlayerDeathEvent>()
         var scheduled: Runnable? = null
 
-        every { Bukkit.getScheduler() } returns scheduler
+        every { plugin.server } returns server
+        every { server.scheduler } returns scheduler
         every { gameManager.isRunning() } returns true
         every { event.entity } returns player
         every { player.uniqueId } returns UUID.randomUUID()
@@ -83,7 +77,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val player = mockPlayer()
         val quitEvent = mockk<PlayerQuitEvent>()
         val kickEvent = mockk<PlayerKickEvent>()
@@ -108,7 +102,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val attacker = mockPlayer()
         val victim = mockPlayer()
         val event = mockDamageEvent(attacker, victim)
@@ -129,7 +123,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val attacker = mockPlayer()
         val marker = mockk<Entity>()
         val event = mockDamageEvent(attacker, marker)
@@ -147,7 +141,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val nonPlayerProjectile = mockk<Projectile>()
         val nonPlayerSource = mockk<ProjectileSource>()
         val victim = mockPlayer()
@@ -168,7 +162,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val attacker = mockPlayer()
         val victim = mockPlayer()
         val event = mockDamageEvent(attacker, victim)
@@ -189,7 +183,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager(restrictBlockModificationOutsideBorder = true)
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val outsideLocation = Location(mockk<World>(), 200.0, 64.0, 200.0)
         val placeEvent = mockBlockPlaceEvent(outsideLocation)
         val breakEvent = mockBlockBreakEvent(outsideLocation)
@@ -209,7 +203,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager(restrictBlockModificationOutsideBorder = false)
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val outsideLocation = Location(mockk<World>(), 200.0, 64.0, 200.0)
         val placeEvent = mockBlockPlaceEvent(outsideLocation)
 
@@ -224,9 +218,10 @@ class GameListenerTest {
     @Test
     fun `onRespawn restores death location and spectator mode for spectators`() {
         val plugin = mockk<JavaPlugin>()
+        val server = mockk<Server>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val player = mockPlayer()
         val deathEvent = mockk<PlayerDeathEvent>()
         val respawnEvent = mockRespawnEvent(player)
@@ -240,9 +235,9 @@ class GameListenerTest {
         every { gameManager.isSpectator(player) } returns true
         every { gameManager.reapplySpectatorMode(player) } returns Unit
 
-        mockkStatic(Bukkit::class)
         val scheduler = mockk<BukkitScheduler>()
-        every { Bukkit.getScheduler() } returns scheduler
+        every { plugin.server } returns server
+        every { server.scheduler } returns scheduler
         every { scheduler.runTaskLater(plugin, any<Runnable>(), 1L) } answers {
             secondArg<Runnable>().run()
             mockk(relaxed = true)
@@ -261,7 +256,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val player = mockPlayer()
         val respawnEvent = mockRespawnEvent(player)
         val victoryLocation = Location(mockk<World>(), 25.0, 80.0, -14.0)
@@ -280,7 +275,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val player = mockPlayer()
         val event = mockMoveEvent(
             player = player,
@@ -303,7 +298,7 @@ class GameListenerTest {
         val plugin = mockk<JavaPlugin>()
         val configManager = mockConfigManager()
         val gameManager = mockk<GameManager>()
-        val listener = GameListener(plugin, configManager, gameManager)
+        val listener = GameListener(plugin, configManager, gameManager, testCoroutineScope())
         val armorStand = mockk<ArmorStand>()
         val event = mockArmorStandManipulateEvent(armorStand)
 
@@ -384,4 +379,7 @@ class GameListenerTest {
         every { gameSettings.restrictBlockModificationOutsideBorder } returns restrictBlockModificationOutsideBorder
         return configManager
     }
+
+    private fun testCoroutineScope(): CoroutineScope =
+        CoroutineScope(Dispatchers.Unconfined)
 }
