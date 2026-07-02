@@ -4,7 +4,6 @@ import io.mockk.mockk
 import me.shirasemaru.mineroyale.config.GameSettings
 import me.shirasemaru.mineroyale.game.MatchRuleSnapshot
 import org.bukkit.GameRule
-import org.bukkit.World
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -16,10 +15,7 @@ class GameRuleServiceTest {
 
         val snapshot = service.applyMatchRules(
             world = mockk(relaxed = true),
-            settings = gameSettings(
-                showPlayerLocatorBar = false,
-                disableAdvancementAnnouncements = true
-            )
+            settings = gameSettings()
         )
 
         assertEquals(MatchRuleSnapshot(locatorBar = null, advancementAnnouncements = null), snapshot)
@@ -35,16 +31,13 @@ class GameRuleServiceTest {
         )
     }
 
-    private fun gameSettings(
-        showPlayerLocatorBar: Boolean,
-        disableAdvancementAnnouncements: Boolean
-    ): GameSettings =
+    private fun gameSettings(): GameSettings =
         GameSettings(
             minPlayers = 2,
             maxPlayers = 20,
             countdownSeconds = 30,
             initialPvpGraceSeconds = 45,
-            showPlayerLocatorBar = showPlayerLocatorBar,
+            showPlayerLocatorBar = false,
             playerLocatorMaxAlivePlayers = 4,
             enableCompassTracking = true,
             giveInitialCompass = true,
@@ -53,7 +46,7 @@ class GameRuleServiceTest {
             endCrystalItemName = "発光の岩",
             endCrystalItemDescription = "使用すると%seconds%秒間自分以外の生存者1名をランダムで発光させます。",
             hideNameTags = false,
-            disableAdvancementAnnouncements = disableAdvancementAnnouncements,
+            disableAdvancementAnnouncements = true,
             restrictBlockModificationOutsideBorder = false
         )
 

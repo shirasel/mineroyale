@@ -115,7 +115,7 @@ class MatchLifecycleService(
         stopRealtimeSystems()
         borderManager.reset(session)
         messageService.broadcastGameStopped()
-        resetGame(session)
+        resetGame()
     }
 
     suspend fun finishMatch(session: GameSession, winner: Player?) {
@@ -125,10 +125,10 @@ class MatchLifecycleService(
 
         if (winner != null && winner.isOnline) {
             victoryService.playVictory(winner)
-            resetGame(session)
+            resetGame()
         } else {
             messageService.broadcastNoWinner()
-            resetGame(session)
+            resetGame()
         }
     }
 
@@ -138,7 +138,7 @@ class MatchLifecycleService(
         borderManager.stop()
     }
 
-    private fun resetGame(session: GameSession) {
+    private fun resetGame() {
         val completedScope = matchScope
         restoreMatchRules()
         clearPreparedSpawnLocations()
