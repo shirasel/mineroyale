@@ -34,11 +34,12 @@ class PluginScope private constructor(
     companion object {
         fun create(plugin: Mineroyale): PluginScope {
             val configManager = ConfigManager(plugin).apply { load() }
-            val messageService = MessageService()
+            val onlinePlayerProvider = BukkitOnlinePlayerProvider()
+            val messageService = MessageService(onlinePlayerProvider)
             val permissionService = MineRoyalePermissionService(plugin)
             val worldProvider = BukkitGameWorldProvider(configManager)
             worldProvider.require()
-            val scoreboardManager = BukkitScoreboardFactory().create()
+            val scoreboardManager = BukkitScoreboardFactory(onlinePlayerProvider).create()
             val playerRegistry = PlayerRegistry()
             val playerSetupService = PlayerSetupService(configManager)
             val spectatorService = SpectatorService(plugin, messageService)

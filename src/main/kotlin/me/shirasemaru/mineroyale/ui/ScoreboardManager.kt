@@ -1,10 +1,10 @@
 package me.shirasemaru.mineroyale.ui
 
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import me.shirasemaru.mineroyale.game.GameSession
 import me.shirasemaru.mineroyale.game.GameState
 import me.shirasemaru.mineroyale.game.PhaseState
 import net.kyori.adventure.text.Component
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
@@ -12,14 +12,17 @@ import org.bukkit.scoreboard.Objective
 import org.bukkit.scoreboard.Scoreboard
 import org.bukkit.scoreboard.Team
 
-class ScoreboardManager {
+class ScoreboardManager(
+    private val onlinePlayerProvider: OnlinePlayerProvider,
+    scoreboardProvider: () -> Scoreboard,
+    private val mainScoreboardProvider: () -> Scoreboard
+) {
 
     private companion object {
         const val PLAYER_TEAM_NAME = "mr_players"
     }
 
-    private val scoreboard: Scoreboard =
-        Bukkit.getScoreboardManager().newScoreboard
+    private val scoreboard: Scoreboard = scoreboardProvider()
 
     private val objective: Objective =
         scoreboard.registerNewObjective(
@@ -38,14 +41,14 @@ class ScoreboardManager {
 
     fun setNameTagsHidden(hidden: Boolean) {
         hideNameTags = hidden
-        syncPlayerTeam(Bukkit.getOnlinePlayers())
+        syncPlayerTeam(onlinePlayerProvider.onlinePlayers)
     }
 
     fun update(session: GameSession) {
         val desiredLines = buildLines(session)
         syncScores(desiredLines)
 
-        val onlinePlayers = Bukkit.getOnlinePlayers()
+        val onlinePlayers = onlinePlayerProvider.onlinePlayers
         syncPlayerTeam(onlinePlayers)
         onlinePlayers.forEach { player ->
             if (player.scoreboard != scoreboard) {
@@ -60,8 +63,8 @@ class ScoreboardManager {
         currentTeamEntries = emptySet()
         hideNameTags = false
         scoreboard.getTeam(PLAYER_TEAM_NAME)?.unregister()
-        Bukkit.getOnlinePlayers().forEach {
-            it.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
+        onlinePlayerProvider.onlinePlayers.forEach {
+            it.scoreboard = mainScoreboardProvider()
         }
     }
 

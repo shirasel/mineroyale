@@ -1,5 +1,6 @@
 package me.shirasemaru.mineroyale.service.game
 
+import me.shirasemaru.mineroyale.bootstrap.OnlinePlayerProvider
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.title.Title
@@ -10,7 +11,9 @@ import org.bukkit.entity.Player
 import java.time.Duration
 import java.util.logging.Logger
 
-class MessageService {
+class MessageService(
+    private val onlinePlayerProvider: OnlinePlayerProvider
+) {
 
     fun spectatorHeadDisplayName(targetName: String): Component =
         Component.text("$targetName を観戦")
@@ -76,7 +79,7 @@ class MessageService {
 
     fun broadcastCountdownStartRequested() {
         Bukkit.broadcast(Component.text("カウントダウンを開始します。"))
-        playStartSound(Bukkit.getOnlinePlayers())
+        playStartSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun sendCannotStopMessage(sender: CommandSender) {
@@ -96,17 +99,17 @@ class MessageService {
 
     fun broadcastNotEnoughPlayersToStart() {
         Bukkit.broadcast(Component.text("参加人数が不足しているため開始できません。"))
-        playWarningSound(Bukkit.getOnlinePlayers())
+        playWarningSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastTooManyPlayers(maxPlayers: Int) {
         Bukkit.broadcast(Component.text("最大参加人数は $maxPlayers 人です。"))
-        playWarningSound(Bukkit.getOnlinePlayers())
+        playWarningSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastGameStopped() {
         Bukkit.broadcast(Component.text("ゲームを終了しました。"))
-        playInfoSound(Bukkit.getOnlinePlayers())
+        playInfoSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastCountdown(time: Int, players: List<Player>) {
@@ -118,12 +121,12 @@ class MessageService {
 
     fun broadcastCountdownCancelled() {
         Bukkit.broadcast(Component.text("参加人数不足のためカウントダウンを中止しました。"))
-        playWarningSound(Bukkit.getOnlinePlayers())
+        playWarningSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastGameStarting() {
         Bukkit.broadcast(Component.text("ゲームを開始します。"))
-        playStartSound(Bukkit.getOnlinePlayers())
+        playStartSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun logMatchStarted(logger: Logger) {
@@ -132,12 +135,12 @@ class MessageService {
 
     fun broadcastNoWinner() {
         Bukkit.broadcast(Component.text("ゲーム終了。勝者はいませんでした。"))
-        playInfoSound(Bukkit.getOnlinePlayers())
+        playInfoSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastPlayerEliminated(playerName: String, aliveCount: Int) {
         Bukkit.broadcast(Component.text("$playerName が脱落しました。残り $aliveCount 人"))
-        playAlertSound(Bukkit.getOnlinePlayers())
+        playAlertSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun sendLateJoinSpectatorMessage(player: Player) {
@@ -182,7 +185,7 @@ class MessageService {
 
     fun broadcastPvpGracePeriod(seconds: Int) {
         Bukkit.broadcast(Component.text("PvP は $seconds 秒後に有効になります。"))
-        playAlertSound(Bukkit.getOnlinePlayers())
+        playAlertSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastPvpEnabled(players: Iterable<Player>) {
@@ -201,23 +204,23 @@ class MessageService {
 
         Bukkit.broadcast(Component.text("ボーダーは $targetSize まで収縮します。"))
         Bukkit.broadcast(Component.text("収縮時間: $durationSeconds 秒"))
-        playAlertSound(Bukkit.getOnlinePlayers())
+        playAlertSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastBorderShrinkStarted(phaseNumber: Int, targetSize: Double, durationSeconds: Int) {
         Bukkit.broadcast(Component.text("フェーズ $phaseNumber のエリア収縮が始まりました。"))
         Bukkit.broadcast(Component.text("ボーダーは $targetSize まで $durationSeconds 秒で収縮します。"))
-        playAlertSound(Bukkit.getOnlinePlayers())
+        playAlertSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastFinalMoveStarted() {
         Bukkit.broadcast(Component.text("最終フェーズの移動を開始しました。"))
-        playAlertSound(Bukkit.getOnlinePlayers())
+        playAlertSound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun broadcastVictory(winnerName: String) {
         Bukkit.broadcast(Component.text("$winnerName が勝利しました。"))
-        playVictorySound(Bukkit.getOnlinePlayers())
+        playVictorySound(onlinePlayerProvider.onlinePlayers)
     }
 
     fun victoryTitle(winnerName: String): Title =
